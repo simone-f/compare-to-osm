@@ -5,6 +5,9 @@ License: GPL v3
 This script creates GeoJSON files by comparing the geometries of highways from OSM and open data released as shapefile.
 Results are displayed on a map in `html/index.html`.
 
+Output example: [compare-to-osm/index.html
+](https://dl.dropboxusercontent.com/u/41550819/OSM/compare-to-osm/index.html)
+
 The script ignores footway, cycleways and pedestrian highways.
 
 ## Dependencies
