@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="css/leaflet.css">
     <script src="js/jquery-1.10.2.min.js"></script>
     <script type="text/javascript" language="javascript" src="data/info.js"></script>
-    <script type="text/javascript" language="javascript" src="data/zones_names.js"></script>
+    <script type="text/javascript" language="javascript" src="data/zones_info.js"></script>
     <script type="text/javascript" language="javascript">
         $(document).ready(function () {
             // Update info
@@ -22,7 +22,7 @@
     <script src="js/leaflet.js"></script>
     <script src="js/topojson.js"></script>
     <script>
-        var map = L.map('map').setView([mapLat, mapLon], mapZoom);
+        var map = L.map('map');
 
         var osmLayer = L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
             attribution: "&copy; <a href='http://osm.org/copyright'>OpenStreetMap contributors</a>",
@@ -51,45 +51,70 @@
 
         var overlayMaps = {};
         var layers = [];
+
         for (var i in zones) {
-            var zone = zones[i];
+            var name = zones[i][0];
+            var bbox = zones[i][1];
+            var latLon = zones[i][2];
+            var output = zones[i][3];
 
-            layers.push({
-                "notinosm": L.geoJson(null, {
-                                        style: {
-                                        weight: 5,
-                                        color: 'red',
-                                        opacity: 1}
-                                        }),
-                "onlyinosm": L.geoJson(null, {
-                                        style: {
-                                        weight: 5,
-                                        color: 'green',
-                                        opacity: 1}
-                                        })
+
+            if (i == 0) {
+                map.setView(latLon, mapZoom);
+            }
+
+            if (output == "vector") {
+                layers.push({
+                    "notinosm": L.geoJson(null, {
+                                            style: {
+                                            weight: 5,
+                                            color: 'red',
+                                            opacity: 1}
+                                            }),
+                    "onlyinosm": L.geoJson(null, {
+                                            style: {
+                                            weight: 5,
+                                            color: 'green',
+                                            opacity: 1}
+                                            })
                 });
-
-            (function (i) {
-                $.getJSON(zones[i] + '.GeoJSON', function (data) {
-                    layers[i]["notinosm"].addData(topojson.feature(data,
-                               data["objects"][zones[i] + "_notinosm"]));
-                    layers[i]["onlyinosm"].addData(topojson.feature(data,
-                              data["objects"][zones[i] + "_onlyinosm"]));
+            } else if (output == "raster") {
+                    var stringa = 'data/' + name + '/tiles/' + 'notinosm';
+                    console.log(stringa);
+                layers.push({
+                    "notinosm": L.tileLayer('data/' + name + '/tiles/' + 'notinosm/{z}/{x}/{y}.png', {
+                                minZoom: 10,
+                                maxZoom: 15}),
+                    "onlyinosm": L.tileLayer('data/' + name + '/tiles/' + 'onlyinosm/{z}/{x}/{y}.png', {
+                                minZoom: 10,
+                                maxZoom: 15})
                 });
+            };
 
-                map
-                    .addLayer(layers[i]["notinosm"])
-                    .addLayer(layers[i]["onlyinosm"]);
+            if (output == "vector") {
+                (function (i) {
+                    var name = zones[i][0];
+                    $.getJSON('data/' + name + '/topojson/'+ name + '.GeoJSON', function (data) {
+                        layers[i]["notinosm"].addData(topojson.feature(data,
+                                   data["objects"][name + "_notinosm"]));
+                        layers[i]["onlyinosm"].addData(topojson.feature(data,
+                                  data["objects"][name + "_onlyinosm"]));
+                    });
+                })(i);
+            }
 
-                // Deactivate layers
-                map.removeLayer(layers[i]["onlyinosm"]);
-                if (i > 0) {
-                    map.removeLayer(layers[i]["notinosm"]);
-                }
+            map
+                .addLayer(layers[i]["notinosm"])
+                .addLayer(layers[i]["onlyinosm"]);
 
-                overlayMaps[zones[i] + ": mancanti in OSM"] = layers[i]["notinosm"];
-                overlayMaps[zones[i] + ": presenti solo in OSM"] = layers[i]["onlyinosm"];
-            })(i);
+            // Deactivate layers
+            map.removeLayer(layers[i]["onlyinosm"]);
+            if (i > 0) {
+                map.removeLayer(layers[i]["notinosm"]);
+            }
+
+            overlayMaps[name + ": mancanti in OSM"] = layers[i]["notinosm"];
+            overlayMaps[name + ": presenti solo in OSM"] = layers[i]["onlyinosm"];
         }
 
         var baseMaps = {"OpenStreetMap": osmLayer};

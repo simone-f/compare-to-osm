@@ -16,29 +16,48 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from subprocess import call
+from subprocess import call, Popen, PIPE
 import os
 import sys
 import ConfigParser
+from rendering.renderer import Renderer
 
 
 class App():
     def __init__(self):
+
+        import time
+        start = time.time()
+
         # Configuration
         print "= Read config.cfg file="
+        self.zones = []
+        for name, zone_config in self.read_config().iteritems():
+            print "\n= %s =" % name
+            self.zones.append(Zone(name, zone_config))
 
-        zones = []
-        for zoneData in self.read_config():
-            print "\n= %s =" % zoneData[0]
-            zones.append(Zone(zoneData))
+        print "\n= Export results ="
+        for zone in self.zones:
+            zone.export()
 
         # Create js file with list of zones
-        zonesListFile = open("html/data/zones_names.js", "w")
-        text = "// Automatically generated file\nvar zones = ["
-        for i, zone in enumerate(zones):
+        self.create_zonesinfo_js()
+
+        end = time.time()
+        print "The assignment took", end-start, "seconds."
+
+    def create_zonesinfo_js(self):
+        zonesListFile = open("html/data/zones_info.js", "w")
+        text = ("// Automatically generated file"
+                "\nvar zones = [")
+        for i, zone in enumerate(self.zones):
             if i != 0:
                 text += ","
-            text += "'%s'" % zone.name
+            text += "['%s', %s, %s, '%s']" % (
+            zone.name,
+            zone.bbox,
+            zone.center,
+            zone.output)
         text += "];"
         zonesListFile.write(text)
         zonesListFile.close()
@@ -52,20 +71,28 @@ class App():
         config.read('config.cfg')
 
         # Read zones data
-        zonesData = []
+        zonesData = {}
         for name in config.sections():
-            adminlevel = config.get(name, 'admin_level')
+            zonesData[name] = {}
+            zonesData[name]["admin_level"] = config.get(name, 'admin_level')
             boundaries = config.get(name, 'boundaries')
-            shapeFile = config.get(name, 'lines')
+            shapefile = config.get(name, 'shapefile')
             for (fileType, filePath) in (("Boundaries", boundaries),
-                                         ("Local council", shapeFile)):
+                                         ("Local council", shapefile)):
                 if not os.path.isfile(filePath):
-                    sys.exit("%s shapefile file is imissing:\n%s" % (fileType,
+                    sys.exit("%s shapefile file is missing:\n%s" % (fileType,
                                                                      filePath))
-            boundaries = boundaries[:-4]
-            shapeFile = shapeFile[:-4]
-
-            zonesData.append([name, adminlevel, boundaries, shapeFile])
+            zonesData[name]["boundaries"] = boundaries[:-4]
+            zonesData[name]["shapefile"] = shapefile[:-4]
+            zonesData[name]["output"] = config.get(name, 'output')
+            if not config.has_option(name, 'min_zoom'):
+                zonesData[name]["min_zoom"] = 10
+            else:
+                zonesData[name]["min_zoom"] = int(config.get(name, 'min_zoom'))
+            if not config.has_option(name, 'max_zoom'):
+                zonesData[name]["max_zoom"] = 13
+            else:
+                zonesData[name]["max_zoom"] = int(config.get(name, 'max_zoom'))
 
         # Create missing directories and files
         osmdir = os.path.join("data", "OSM")
@@ -75,8 +102,6 @@ class App():
             infoFile = open('html/data/info.js', "w")
             text = """
 var title = 'Compare to OSM';
-var mapLat = 0;
-var mapLon = 0;
 var mapZoom = 0;
 var info = '<b>Compare to OSM</b>';
 info += '<p>Modify html/data/info.js to write here';
@@ -91,23 +116,40 @@ compare-to-osm" target="_blank">Script code</a>';"""
 
     def print_local_councils_data(self, zonesData):
         print "\n= Local Councils ="
-        for zoneData in zonesData:
-            print "name:", zoneData[0]
-            print "admin_level:", zoneData[1]
-            print "boundaries shapefile:", zoneData[2]
-            print "highways shapefile:", zoneData[3]
+        for name, zone_config in zonesData.iteritems():
+            print "name:", name
+            print "admin_level:", zone_config["admin_level"]
+            print "boundaries shapefile:", zone_config["boundaries"]
+            print "highways shapefile:", zone_config["shapefile"]
+            print "output:", zone_config["output"]
             print
 
 
 class Zone():
-    def __init__(self, (name, adminlevel, boundaries, shapeFile)):
+    def __init__(self, name, zone_config):
+        # Input
         self.name = name
-        self.adminlevel = adminlevel
-        self.boundaries = boundaries
-        self.shapeFile = shapeFile
+        self.admin_level = zone_config["admin_level"]
+        self.shapeFile = zone_config["shapefile"]
+        self.boundaries = zone_config["boundaries"]
+        self.bbox = ""
+        self.center = ""
 
         self.osmFile = "data/OSM/%s.osm" % name
         self.database = "data/%s.sqlite" % name
+
+        # Output
+        self.output = zone_config["output"]
+        self.min_zoom = zone_config["min_zoom"]
+        self.max_zoom = zone_config["max_zoom"]
+
+        self.output_dir = os.path.join("data", "out", self.name)
+
+        self.export_dir = os.path.join("html", "data", self.name)
+        self.export_dir_topojson = os.path.join(self.export_dir,
+                                   "topojson")
+        self.export_dir_png = os.path.join(self.export_dir, "PNG")
+        self.export_dir_tiles = os.path.join(self.export_dir, "tiles")
 
         print "\n= Donwload OSM data of highway=* (!= footway != cycleway)\
  inside the local council="
@@ -115,22 +157,24 @@ class Zone():
 
         print "\n= Create Spatialite database ="
         self.create_db()
+        self.read_boundaries_bbox()
+        self.read_boundaries_center()
 
         print "\n= Calculate differences between OSM/lc ways ="
         # Calculate differences between osm/lc ways and lc/osm buffers
-        statuses = ("notinosm", "onlyinosm")
-        for status in statuses:
+        self.statuses = ("notinosm", "onlyinosm")
+        for status in self.statuses:
             self.find_ways(status)
 
         print "\n= Export results ="
         self.export(statuses)
 
     def download_osm(self):
-            url = 'http://overpass.osm.rambler.ru/cgi/interpreter?data=area'
-            url += '[name="%s"][admin_level=%s];' % (self.name, self.adminlevel)
-            url += 'way(area)["highway"]["highway"!~"footway"]["highway"!~"cycleway"];(._;>;);out meta;'
-            cmd = "wget \"%s\" -O %s" % (url, self.osmFile)
-            self.execute("cmd", cmd)
+        url = 'http://overpass.osm.rambler.ru/cgi/interpreter?data=area'
+        url += '[name="%s"][admin_level=%s];' % (self.name, self.admin_level)
+        url += 'way(area)["highway"]["highway"!~"footway"]["highway"!~"cycleway"];(._;>;);out meta;'
+        cmd = "wget \"%s\" -O %s" % (url, self.osmFile)
+        self.execute("cmd", cmd)
 
     def create_db(self):
         """Create a Spatialite database with OSM highways and
@@ -146,6 +190,8 @@ class Zone():
         # Import OSM data
         cmd = "spatialite_tool -i -shp data/OSM/lines -d %s -t rawOsmWays -c UTF-8 -s 4326" % self.database
         self.execute("cmd", cmd)
+        sql = "SELECT CreateSpatialIndex('%s', 'Geometry');" % "boundaries"
+        self.execute("qry", sql)
 
         print "\n- import local council's boundaries"
         cmd = "spatialite_tool -i -shp %s -d %s -t boundaries -c UTF-8 -s 4326" % (self.boundaries,
@@ -190,6 +236,32 @@ class Zone():
             self.execute("qry", sql)
             sql = "SELECT CreateSpatialIndex('%sBuf', 'Geometry');" % table
             self.execute("qry", sql)
+
+    def read_boundaries_bbox(self):
+        """Read boundaries bbox to use it in generate_tiles.py
+        """
+        query = ("SELECT MbrMinX(Geometry), MbrMinY(Geometry), "
+                 "MbrMaxX(Geometry), MbrMaxY(Geometry) FROM boundaries;")
+        echo_query = Popen(["echo", query], stdout=PIPE)
+        find_bbox = Popen(["spatialite", self.database],
+                    stdin=echo_query.stdout, stdout=PIPE)
+        echo_query.stdout.close()
+        (stdoutdata, err) = find_bbox.communicate()
+        self.bbox = [float(x) for x in stdoutdata[:-1].split("|")]
+        print "bbox:", self.bbox
+
+    def read_boundaries_center(self):
+        """Read boundaries center to use it in index.html
+        """
+        query = ("SELECT ST_Y(ST_Centroid(ST_Boundary(Geometry))), "
+                 "ST_X(ST_Centroid(ST_Boundary(Geometry))) FROM boundaries;")
+        echo_query = Popen(["echo", query], stdout=PIPE)
+        find_center = Popen(["spatialite", self.database],
+                    stdin=echo_query.stdout, stdout=PIPE)
+        echo_query.stdout.close()
+        (stdoutdata, err) = find_center.communicate()
+        self.center = [float(x) for x in stdoutdata[:-1].split("|")]
+        print "center:", self.center
 
     def multilines_to_line(self, tableIn, tableOut):
         print "\n- convert multilinestring to linestring of tabel %s" % tableIn
@@ -259,27 +331,50 @@ class Zone():
 
         self.multilines_to_line("%s_MIXED" % table, table)
 
-    def export(self, statuses):
-        """Export results:
+    def export(self):
+        """Export results.
+           If output: "vector":
            Spatialite --> GeoJSON --> TopoJSON for Leaflet
+           if output: "raster":
+           Spatialite --> Shapefile --> (mapnik) PNG tiles for Leaflet
         """
-        geojsonFiles = ["html/%s_%s.GeoJSON" % (self.name, status) for status in statuses]
-        self.remove_geojson_files(geojsonFiles)
-        for i, status in enumerate(statuses):
-            cmd = "ogr2ogr -f \"GeoJSON\" \"%s\" %s -sql \"SELECT Geometry FROM %s\"" % (geojsonFiles[i], self.database, status)
+        print "\n- Export results for zone:", self.name
+
+        # Remove old files and create missing directories
+        print "- Remove old files..."
+        for directory in (self.output_dir, self.export_dir_topojson,
+                          self.export_dir_png,
+                          self.export_dir_tiles):
+            self.remove_old_files_and_create_dirs(directory)
+
+        if self.output == "vector":
+            geojsonFiles = [os.path.join(self.output_dir,
+                            "%s.GeoJSON" % status)
+                            for status in self.statuses]
+            for i, status in enumerate(self.statuses):
+                cmd = "ogr2ogr -f \"GeoJSON\" \"%s\" %s -sql \"SELECT Geometry FROM %s\"" % (geojsonFiles[i], self.database, status)
+                self.execute("cmd", cmd)
+
+            cmd = "topojson -q 10000000 -o %s %s" % (
+                  os.path.join(self.export_dir_topojson, "vector.GeoJSON"),
+                  " ".join(geojsonFiles))
             self.execute("cmd", cmd)
 
-        cmd = "topojson -q 10000000 -o html/%s.GeoJSON %s" % (self.name,
-                                                 " ".join(geojsonFiles))
-        self.execute("cmd", cmd)
+        elif self.output == "raster":
+            shapefiles = [os.path.join(self.output_dir,
+                          "%s.shp" % status)
+                          for status in self.statuses]
+            for i, status in enumerate(self.statuses):
+                cmd = "ogr2ogr -f \"ESRI Shapefile\" \"%s\" %s -sql \"SELECT Geometry FROM %s\"" % (shapefiles[i], self.database, status)
+                self.execute("cmd", cmd)
 
-        self.remove_geojson_files(geojsonFiles)
+                renderer = Renderer(self, status, shapefiles[i])
 
-    def remove_geojson_files(self, fileNames):
-        for fileName in fileNames:
-            if os.path.exists(fileName):
-                self.execute("cmd", "rm %s" % fileName)
-
+    def remove_old_files_and_create_dirs(self, directory):
+        if os.path.isdir(directory):
+            self.execute("cmd", "rm -r %s/*" % directory)
+        else:
+            os.makedirs(directory)
 
     def execute(self, mode, cmd):
         """mode == cmd OR qry
