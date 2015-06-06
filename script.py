@@ -78,7 +78,7 @@ class App():
             boundaries = config.get(name, 'boundaries')
             shapefile = config.get(name, 'shapefile')
             for (file_type, file_path) in (("Boundaries", boundaries),
-                                           ("Local council", shapefile)):
+                                           ("Zone", shapefile)):
                 if not os.path.isfile(file_path):
                     sys.exit("%s shapefile file is missing:\n%s" % (file_type,
                                                                     file_path))
@@ -117,7 +117,7 @@ compare-to-osm" target="_blank">Script code</a>';"""
         return zones_config
 
     def print_local_councils_data(self, zones_config):
-        print "\n= Local Councils ="
+        print "\n= Zones ="
         for name, zone_config in zones_config.iteritems():
             print "name:", name
             print "admin_level:", zone_config["admin_level"]
@@ -161,8 +161,8 @@ class Zone():
         self.read_boundaries_bbox()
         self.read_boundaries_center()
 
-        print "\n= Calculate differences between OSM/lc ways ="
-        # Calculate differences between osm/lc ways and lc/osm buffers
+        print ("\n= Calculate differences between OSM/open data ways"
+               " and their buffers =")
         self.statuses = ("notinosm", "onlyinosm")
 
         for status in self.statuses:
@@ -178,18 +178,20 @@ class Zone():
         self.execute("cmd", cmd)
 
     def create_db(self):
-        """Create a Spatialite database with OSM highways and
-           and lines from local council released data.
+        """Create a Spatialite database with OSM highways
+           and lines from open data.
         """
         print "- Remove data produced by previous executions of the script"
         self.execute("cmd", "rm data/OSM/li* %s" % self.database)
 
         # Import boundaries
-        print "\n- import local council's boundaries"
+        print "\n- import zone's boundaries"
         cmd = ("spatialite_tool -i -shp %s -d %s"
                " -t boundaries -c UTF-8 -s 4326") % (self.boundaries,
                                                      self.database)
         self.execute("cmd", cmd)
+        sql = "SELECT CreateSpatialIndex('boundaries', 'Geometry');"
+        self.execute("qry", sql)
 
         # Import OSM data
         print "\n- import OSM data into database"
@@ -222,7 +224,7 @@ class Zone():
                                                          self.database)
         self.execute("cmd", cmd)
 
-        # Create spatial indexes and buffers around osm/lc ways
+        # Create spatial indexes and buffers around OSM/open data ways
         for table in ("osm_ways", "open_data_ways"):
 
             print "\n- create spatial index of ", table
@@ -303,7 +305,7 @@ class Zone():
         self.execute("qry", sql)
 
     def find_ways(self, table):
-        """Calculate differences between osm/lc ways and lc/osm buffers
+        """Calculate differences between OSM/open data ways and their buffers
         """
         if table == "notinosm":
             print ("\n- Find ways in zone's data which are missing in OSM"
