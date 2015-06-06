@@ -19,6 +19,7 @@
 from subprocess import call, Popen, PIPE
 import os
 import sys
+import time
 import ConfigParser
 from rendering.renderer import Renderer
 
@@ -26,7 +27,6 @@ from rendering.renderer import Renderer
 class App():
     def __init__(self):
 
-        import time
         start = time.time()
 
         # Configuration
@@ -44,7 +44,7 @@ class App():
         self.create_zonesinfo_js()
 
         end = time.time()
-        print "The assignment took", end-start, "seconds."
+        print "Execution time: ", end-start, "seconds."
 
     def create_zonesinfo_js(self):
         zonesListFile = open("html/data/zones_info.js", "w")
@@ -163,17 +163,15 @@ class Zone():
         print "\n= Calculate differences between OSM/lc ways ="
         # Calculate differences between osm/lc ways and lc/osm buffers
         self.statuses = ("notinosm", "onlyinosm")
+
         for status in self.statuses:
             self.find_ways(status)
-
-        print "\n= Export results ="
-        self.export(statuses)
 
     def download_osm(self):
         url = 'http://overpass.osm.rambler.ru/cgi/interpreter?data=area'
         url += '[name="%s"][admin_level=%s];' % (self.name, self.admin_level)
         url += 'way(area)["highway"]["highway"!~"footway"]["highway"!~"cycleway"];(._;>;);out meta;'
-        cmd = "wget \"%s\" -O %s" % (url, self.osmFile)
+        cmd = "wget '%s' -O %s" % (url, self.osmFile)
         self.execute("cmd", cmd)
 
     def create_db(self):
@@ -183,39 +181,40 @@ class Zone():
         print "- Remove data produced by previous executions of the script"
         self.execute("cmd", "rm data/OSM/li* %s" % self.database)
 
-        print "\n- import OSM data into database"
-        # Convert OSM to shp
-        cmd = "ogr2ogr -f \"ESRI Shapefile\" data/OSM %s -sql \"SELECT osm_id FROM lines\" -lco SHPT=ARC" % self.osmFile
-        self.execute("cmd", cmd)
-        # Import OSM data
-        cmd = "spatialite_tool -i -shp data/OSM/lines -d %s -t rawOsmWays -c UTF-8 -s 4326" % self.database
-        self.execute("cmd", cmd)
-        sql = "SELECT CreateSpatialIndex('%s', 'Geometry');" % "boundaries"
-        self.execute("qry", sql)
-
+        # Import boundaries
         print "\n- import local council's boundaries"
         cmd = "spatialite_tool -i -shp %s -d %s -t boundaries -c UTF-8 -s 4326" % (self.boundaries,
                                                                                    self.database)
         self.execute("cmd", cmd)
-        sql = "SELECT CreateSpatialIndex('%s', 'Geometry');" % "boundaries"
-        self.execute("qry", sql)
+
+        # Import OSM data
+        print "\n- import OSM data into database"
+        cmd = "ogr2ogr -f \"ESRI Shapefile\" data/OSM %s -sql \"SELECT osm_id FROM lines\" -lco SHPT=ARC" % self.osmFile
+        self.execute("cmd", cmd)
+
+        cmd = "spatialite_tool -i -shp data/OSM/lines -d %s -t raw_osm_ways -c UTF-8 -s 4326" % self.database
+        self.execute("cmd", cmd)
 
         print "\n- extract highways in OSM that intersect local council's boundaries"
         sql = """
-            CREATE TABLE osmWays_MIXED AS
+            CREATE TABLE osm_ways_MIXED AS
             SELECT ST_Intersection(b.Geometry, w.Geometry) AS Geometry
-            FROM boundaries AS b, rawOsmWays AS w;"""
+            FROM boundaries AS b, raw_osm_ways AS w;"""
         self.execute("qry", sql)
 
-        self.multilines_to_line("osmWays_MIXED", "osmWays")
+        self.multilines_to_line("osm_ways_MIXED", "osm_ways")
+        sql = """
+            SELECT RecoverGeometryColumn('osm_ways', 'Geometry',
+            4326, 'LINESTRING', 'XY');"""
+        self.execute("qry", sql)
 
-        # Import lc data
-        print "\n- import local council released data"
-        cmd = "spatialite_tool -i -shp %s -d %s -t archi -c CP1252 -s 4326" % (self.shapeFile, self.database)
+        # Import open data
+        print "\n- import open data"
+        cmd = "spatialite_tool -i -shp %s -d %s -t open_data_ways -c CP1252 -s 4326" % (self.shapeFile, self.database)
         self.execute("cmd", cmd)
 
         # Create spatial indexes and buffers around osm/lc ways
-        for table in ("osmWays", "archi"):
+        for table in ("osm_ways", "open_data_ways"):
 
             print "\n- create spatial index of ", table
             sql = "SELECT CreateSpatialIndex('%s', 'Geometry');" % table
@@ -223,25 +222,25 @@ class Zone():
 
             print "\n- create buffers of ", table
             sql = """
-                CREATE TABLE %sBuf AS
+                CREATE TABLE %s_buffer AS
                 SELECT ST_Buffer(Geometry, 0.0001) AS Geometry
                 FROM %s
                 WHERE ST_Buffer(Geometry, 0.0001) NOT NULL;""" % (table,
                                                                   table)
             self.execute("qry", sql)
             sql = """
-            SELECT RecoverGeometryColumn('%sBuf', 'Geometry',
-              4326, 'POLYGON', 'XY');
-            """ % table
+                SELECT RecoverGeometryColumn('%s_buffer', 'Geometry',
+                4326, 'POLYGON', 'XY');""" % table
             self.execute("qry", sql)
-            sql = "SELECT CreateSpatialIndex('%sBuf', 'Geometry');" % table
+            sql = "SELECT CreateSpatialIndex('%s_buffer', 'Geometry');" % table
             self.execute("qry", sql)
 
     def read_boundaries_bbox(self):
         """Read boundaries bbox to use it in generate_tiles.py
         """
-        query = ("SELECT MbrMinX(Geometry), MbrMinY(Geometry), "
-                 "MbrMaxX(Geometry), MbrMaxY(Geometry) FROM boundaries;")
+        query = """
+            SELECT MbrMinX(Geometry), MbrMinY(Geometry),
+            MbrMaxX(Geometry), MbrMaxY(Geometry) FROM boundaries;"""
         echo_query = Popen(["echo", query], stdout=PIPE)
         find_bbox = Popen(["spatialite", self.database],
                     stdin=echo_query.stdout, stdout=PIPE)
@@ -253,8 +252,9 @@ class Zone():
     def read_boundaries_center(self):
         """Read boundaries center to use it in index.html
         """
-        query = ("SELECT ST_Y(ST_Centroid(ST_Boundary(Geometry))), "
-                 "ST_X(ST_Centroid(ST_Boundary(Geometry))) FROM boundaries;")
+        query = """
+            SELECT ST_Y(ST_Centroid(ST_Boundary(Geometry))),
+            ST_X(ST_Centroid(ST_Boundary(Geometry))) FROM boundaries;"""
         echo_query = Popen(["echo", query], stdout=PIPE)
         find_center = Popen(["spatialite", self.database],
                     stdin=echo_query.stdout, stdout=PIPE)
@@ -293,13 +293,13 @@ class Zone():
         """Calculate differences between osm/lc ways and lc/osm buffers
         """
         if table == "notinosm":
-            print "\n- Find ways in local council's data which are missing in OSM (comunali - buffer(OSM))"
-            ways = "archi"
-            buff = "osmWaysBuf"
+            print "\n- Find ways in local council's data which are missing in OSM (open_data_ways - osm_ways_buffer)"
+            ways = "open_data_ways"
+            buff = "osm_ways_buffer"
         elif table == "onlyinosm":
-            print "\n- Find ways in OSM which are missing in local council's data (OSM - buffer(comunali))"
-            ways = "osmWays"
-            buff = "archiBuf"
+            print "\n- Find ways in OSM which are missing in local council's data (osm_ways - open_data_ways_buffer)"
+            ways = "osm_ways"
+            buff = "open_data_ways_buffer"
 
         sql = """
         CREATE TABLE {temptable} AS
