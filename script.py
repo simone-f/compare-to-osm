@@ -30,7 +30,7 @@ class App():
         start = time.time()
 
         # Configuration
-        print "= Read config.cfg file="
+        print "= Read config.cfg file ="
         self.zones = []
         for name, zone_config in self.read_config().iteritems():
             print "\n= %s =" % name
@@ -47,20 +47,20 @@ class App():
         print "Execution time: ", end-start, "seconds."
 
     def create_zonesinfo_js(self):
-        zonesListFile = open("html/data/zones_info.js", "w")
+        zones_list_file = open("html/data/zones_info.js", "w")
         text = ("// Automatically generated file"
                 "\nvar zones = [")
         for i, zone in enumerate(self.zones):
             if i != 0:
                 text += ","
             text += "['%s', %s, %s, '%s']" % (
-            zone.name,
-            zone.bbox,
-            zone.center,
-            zone.output)
+                zone.name,
+                zone.bbox,
+                zone.center,
+                zone.output)
         text += "];"
-        zonesListFile.write(text)
-        zonesListFile.close()
+        zones_list_file.write(text)
+        zones_list_file.close()
 
     def read_config(self):
         if not os.path.isfile('config.cfg'):
@@ -71,35 +71,37 @@ class App():
         config.read('config.cfg')
 
         # Read zones data
-        zonesData = {}
+        zones_config = {}
         for name in config.sections():
-            zonesData[name] = {}
-            zonesData[name]["admin_level"] = config.get(name, 'admin_level')
+            zones_config[name] = {}
+            zones_config[name]["admin_level"] = config.get(name, 'admin_level')
             boundaries = config.get(name, 'boundaries')
             shapefile = config.get(name, 'shapefile')
-            for (fileType, filePath) in (("Boundaries", boundaries),
-                                         ("Local council", shapefile)):
-                if not os.path.isfile(filePath):
-                    sys.exit("%s shapefile file is missing:\n%s" % (fileType,
-                                                                     filePath))
-            zonesData[name]["boundaries"] = boundaries[:-4]
-            zonesData[name]["shapefile"] = shapefile[:-4]
-            zonesData[name]["output"] = config.get(name, 'output')
+            for (file_type, file_path) in (("Boundaries", boundaries),
+                                           ("Local council", shapefile)):
+                if not os.path.isfile(file_path):
+                    sys.exit("%s shapefile file is missing:\n%s" % (file_type,
+                                                                    file_path))
+            zones_config[name]["boundaries"] = boundaries[:-4]
+            zones_config[name]["shapefile"] = shapefile[:-4]
+            zones_config[name]["output"] = config.get(name, 'output')
             if not config.has_option(name, 'min_zoom'):
-                zonesData[name]["min_zoom"] = 10
+                zones_config[name]["min_zoom"] = 10
             else:
-                zonesData[name]["min_zoom"] = int(config.get(name, 'min_zoom'))
+                zones_config[name]["min_zoom"] = int(config.get(name,
+                                                                'min_zoom'))
             if not config.has_option(name, 'max_zoom'):
-                zonesData[name]["max_zoom"] = 13
+                zones_config[name]["max_zoom"] = 13
             else:
-                zonesData[name]["max_zoom"] = int(config.get(name, 'max_zoom'))
+                zones_config[name]["max_zoom"] = int(config.get(name,
+                                                                'max_zoom'))
 
         # Create missing directories and files
         osmdir = os.path.join("data", "OSM")
         if not os.path.exists(osmdir):
             os.makedirs(osmdir)
         if not os.path.isfile('html/data/info.js'):
-            infoFile = open('html/data/info.js', "w")
+            info_file = open('html/data/info.js', "w")
             text = """
 var title = 'Compare to OSM';
 var mapZoom = 0;
@@ -107,16 +109,16 @@ var info = '<b>Compare to OSM</b>';
 info += '<p>Modify html/data/info.js to write here';
 info += '<br><br><a href="https://github.com/simone-f/\
 compare-to-osm" target="_blank">Script code</a>';"""
-            infoFile.write(text)
-            infoFile.close()
+            info_file.write(text)
+            info_file.close()
 
-        self.print_local_councils_data(zonesData)
+        self.print_local_councils_data(zones_config)
 
-        return zonesData
+        return zones_config
 
-    def print_local_councils_data(self, zonesData):
+    def print_local_councils_data(self, zones_config):
         print "\n= Local Councils ="
-        for name, zone_config in zonesData.iteritems():
+        for name, zone_config in zones_config.iteritems():
             print "name:", name
             print "admin_level:", zone_config["admin_level"]
             print "boundaries shapefile:", zone_config["boundaries"]
@@ -146,13 +148,12 @@ class Zone():
         self.output_dir = os.path.join("data", "out", self.name)
 
         self.export_dir = os.path.join("html", "data", self.name)
-        self.export_dir_topojson = os.path.join(self.export_dir,
-                                   "topojson")
+        self.export_dir_topojson = os.path.join(self.export_dir, "topojson")
         self.export_dir_png = os.path.join(self.export_dir, "PNG")
         self.export_dir_tiles = os.path.join(self.export_dir, "tiles")
 
-        print "\n= Donwload OSM data of highway=* (!= footway != cycleway)\
- inside the local council="
+        print ("\n= Donwload OSM data of the zone ="
+               "\n  highway=* != footway != cycleway")
         self.download_osm()
 
         print "\n= Create Spatialite database ="
@@ -170,7 +171,9 @@ class Zone():
     def download_osm(self):
         url = 'http://overpass.osm.rambler.ru/cgi/interpreter?data=area'
         url += '[name="%s"][admin_level=%s];' % (self.name, self.admin_level)
-        url += 'way(area)["highway"]["highway"!~"footway"]["highway"!~"cycleway"];(._;>;);out meta;'
+        url += 'way(area)["highway"]'
+        url += '["highway"!~"footway"]["highway"!~"cycleway"];'
+        url += '(._;>;);out meta;'
         cmd = "wget '%s' -O %s" % (url, self.osmFile)
         self.execute("cmd", cmd)
 
@@ -183,19 +186,23 @@ class Zone():
 
         # Import boundaries
         print "\n- import local council's boundaries"
-        cmd = "spatialite_tool -i -shp %s -d %s -t boundaries -c UTF-8 -s 4326" % (self.boundaries,
-                                                                                   self.database)
+        cmd = ("spatialite_tool -i -shp %s -d %s"
+               " -t boundaries -c UTF-8 -s 4326") % (self.boundaries,
+                                                     self.database)
         self.execute("cmd", cmd)
 
         # Import OSM data
         print "\n- import OSM data into database"
-        cmd = "ogr2ogr -f \"ESRI Shapefile\" data/OSM %s -sql \"SELECT osm_id FROM lines\" -lco SHPT=ARC" % self.osmFile
+        cmd = ("ogr2ogr -f \"ESRI Shapefile\" data/OSM %s"
+               " -sql \"SELECT osm_id FROM lines\""
+               " -lco SHPT=ARC") % self.osmFile
         self.execute("cmd", cmd)
 
-        cmd = "spatialite_tool -i -shp data/OSM/lines -d %s -t raw_osm_ways -c UTF-8 -s 4326" % self.database
+        cmd = ("spatialite_tool -i -shp data/OSM/lines -d %s"
+               " -t raw_osm_ways -c UTF-8 -s 4326") % self.database
         self.execute("cmd", cmd)
 
-        print "\n- extract highways in OSM that intersect local council's boundaries"
+        print "\n- extract highways in OSM that intersect zone's boundaries"
         sql = """
             CREATE TABLE osm_ways_MIXED AS
             SELECT ST_Intersection(b.Geometry, w.Geometry) AS Geometry
@@ -210,7 +217,9 @@ class Zone():
 
         # Import open data
         print "\n- import open data"
-        cmd = "spatialite_tool -i -shp %s -d %s -t open_data_ways -c CP1252 -s 4326" % (self.shapeFile, self.database)
+        cmd = ("spatialite_tool -i -shp %s -d %s"
+               " -t open_data_ways -c CP1252 -s 4326") % (self.shapeFile,
+                                                         self.database)
         self.execute("cmd", cmd)
 
         # Create spatial indexes and buffers around osm/lc ways
@@ -243,7 +252,7 @@ class Zone():
             MbrMaxX(Geometry), MbrMaxY(Geometry) FROM boundaries;"""
         echo_query = Popen(["echo", query], stdout=PIPE)
         find_bbox = Popen(["spatialite", self.database],
-                    stdin=echo_query.stdout, stdout=PIPE)
+                          stdin=echo_query.stdout, stdout=PIPE)
         echo_query.stdout.close()
         (stdoutdata, err) = find_bbox.communicate()
         self.bbox = [float(x) for x in stdoutdata[:-1].split("|")]
@@ -257,28 +266,32 @@ class Zone():
             ST_X(ST_Centroid(ST_Boundary(Geometry))) FROM boundaries;"""
         echo_query = Popen(["echo", query], stdout=PIPE)
         find_center = Popen(["spatialite", self.database],
-                    stdin=echo_query.stdout, stdout=PIPE)
+                            stdin=echo_query.stdout, stdout=PIPE)
         echo_query.stdout.close()
         (stdoutdata, err) = find_center.communicate()
         self.center = [float(x) for x in stdoutdata[:-1].split("|")]
         print "center:", self.center
 
-    def multilines_to_line(self, tableIn, tableOut):
-        print "\n- convert multilinestring to linestring of tabel %s" % tableIn
+    def multilines_to_line(self, table_in, table_out):
+        print ("\n- convert multilinestring to linestring"
+               " in table %s") % table_in
         # Extract MULTILINESTRINGs
         sql = """
             CREATE TABLE %s_MULTILINESTRING AS SELECT Geometry
             FROM %s
-            WHERE GeometryType(Geometry) = 'MULTILINESTRING';""" % (tableOut,
-                                                       tableIn)
+            WHERE GeometryType(Geometry) = 'MULTILINESTRING';""" % (table_out,
+                                                                    table_in)
         self.execute("qry", sql)
         sql = """
             SELECT RecoverGeometryColumn('%s_MULTILINESTRING', 'Geometry',
                 4326, 'MULTILINESTRING', 'XY');
-            """ % (tableOut)
+            """ % (table_out)
         self.execute("qry", sql)
         # Convert MULTILINESTRING to linestring and union with LINESTRINGs
-        self.execute("qry", ".elemgeo %s_MULTILINESTRING Geometry %s_SINGLELINESTRING pk_elem multi_id;" % (tableOut, tableOut))
+        sql = (".elemgeo %s_MULTILINESTRING Geometry"
+               " %s_SINGLELINESTRING pk_elem multi_id;") % (table_out,
+                                                            table_out)
+        self.execute("qry", sql)
         sql = """
             CREATE TABLE %s AS
             SELECT Geometry
@@ -286,25 +299,28 @@ class Zone():
             UNION
             SELECT Geometry
             FROM %s WHERE GeometryType(Geometry) = 'LINESTRING';
-            """ % (tableOut, tableOut, tableIn)
+            """ % (table_out, table_out, table_in)
         self.execute("qry", sql)
 
     def find_ways(self, table):
         """Calculate differences between osm/lc ways and lc/osm buffers
         """
         if table == "notinosm":
-            print "\n- Find ways in local council's data which are missing in OSM (open_data_ways - osm_ways_buffer)"
+            print ("\n- Find ways in zone's data which are missing in OSM"
+                   "\n  (open_data_ways - osm_ways_buffer)")
             ways = "open_data_ways"
             buff = "osm_ways_buffer"
         elif table == "onlyinosm":
-            print "\n- Find ways in OSM which are missing in local council's data (osm_ways - open_data_ways_buffer)"
+            print ("\n- Find ways in OSM which are missing in zone's data"
+                   "\n  (osm_ways - open_data_ways_buffer)")
             ways = "osm_ways"
             buff = "open_data_ways_buffer"
 
         sql = """
         CREATE TABLE {temptable} AS
         SELECT Geometry FROM (
-            SELECT ST_Difference(way.Geometry, ST_Union(buffer.Geometry)) AS Geometry
+            SELECT
+            ST_Difference(way.Geometry, ST_Union(buffer.Geometry)) AS Geometry
             FROM {ways} AS way, {buff} AS buffer
             WHERE ST_Intersects(way.Geometry, buffer.Geometry) AND
             buffer.ROWID IN (
@@ -348,16 +364,19 @@ class Zone():
             self.remove_old_files_and_create_dirs(directory)
 
         if self.output == "vector":
-            geojsonFiles = [os.path.join(self.output_dir,
-                            "%s.GeoJSON" % status)
-                            for status in self.statuses]
+            geojson_files = [os.path.join(self.output_dir,
+                             "%s.GeoJSON" % status)
+                             for status in self.statuses]
             for i, status in enumerate(self.statuses):
-                cmd = "ogr2ogr -f \"GeoJSON\" \"%s\" %s -sql \"SELECT Geometry FROM %s\"" % (geojsonFiles[i], self.database, status)
+                cmd = ("ogr2ogr -f \"GeoJSON\" \"%s\" %s"
+                       " -sql \"SELECT Geometry FROM %s\"") % (geojson_files[i],
+                                                               self.database,
+                                                               status)
                 self.execute("cmd", cmd)
 
             cmd = "topojson -q 10000000 -o %s %s" % (
                   os.path.join(self.export_dir_topojson, "vector.GeoJSON"),
-                  " ".join(geojsonFiles))
+                  " ".join(geojson_files))
             self.execute("cmd", cmd)
 
         elif self.output == "raster":
@@ -365,10 +384,13 @@ class Zone():
                           "%s.shp" % status)
                           for status in self.statuses]
             for i, status in enumerate(self.statuses):
-                cmd = "ogr2ogr -f \"ESRI Shapefile\" \"%s\" %s -sql \"SELECT Geometry FROM %s\"" % (shapefiles[i], self.database, status)
+                cmd = ("ogr2ogr -f \"ESRI Shapefile\" \"%s\" %s"
+                       " -sql \"SELECT Geometry FROM %s\"") % (shapefiles[i],
+                                                               self.database,
+                                                               status)
                 self.execute("cmd", cmd)
 
-                renderer = Renderer(self, status, shapefiles[i])
+                Renderer(self, status, shapefiles[i])
 
     def remove_old_files_and_create_dirs(self, directory):
         if os.path.isdir(directory):

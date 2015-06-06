@@ -1,5 +1,4 @@
 #! /usr/bin/python
-from subprocess import call
 import mapnik
 from generate_tiles import render_tiles
 import os
