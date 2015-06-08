@@ -17,12 +17,14 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 from subprocess import call, Popen, PIPE
 from rendering.renderer import Renderer
 
 
 class Zone():
-    def __init__(self, name, zone_config):
+    def __init__(self, app, name, zone_config):
+        self.app = app
         # Input
         self.name = name
         self.admin_level = zone_config["admin_level"]
@@ -46,21 +48,26 @@ class Zone():
         self.export_dir_png = os.path.join(self.export_dir, "PNG")
         self.export_dir_tiles = os.path.join(self.export_dir, "tiles")
 
-        print ("\n= Donwload OSM data of the zone ="
-               "\n  highway=* != footway != cycleway")
-        self.download_osm()
-
-        print "\n= Create Spatialite database ="
-        self.create_db()
-        self.read_boundaries_bbox()
-        self.read_boundaries_center()
-
-        print ("\n= Calculate differences between OSM/open data ways"
-               " and their buffers =")
         self.statuses = ("notinosm", "onlyinosm")
 
-        for status in self.statuses:
-            self.find_ways(status)
+        if not app.args.export:
+            print ("\n= Donwload OSM data of the zone ="
+                   "\n  highway=* != footway != cycleway")
+            self.download_osm()
+
+            print "\n= Create Spatialite database ="
+            self.create_db()
+
+            print ("\n= Calculate differences between OSM/open data ways"
+                   " and their buffers =")
+            for status in self.statuses:
+                self.find_ways(status)
+        if not os.path.isfile(self.database):
+            sys.exit("\n* Error: it is not possible to continue; the database"
+                     " with the analysis is missing. Try to execute the"
+                     " program again without --export option.")
+        self.read_boundaries_bbox()
+        self.read_boundaries_center()
 
     def download_osm(self):
         url = 'http://overpass.osm.rambler.ru/cgi/interpreter?data=area'

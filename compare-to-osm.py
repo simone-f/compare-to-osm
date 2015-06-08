@@ -20,20 +20,35 @@ import os
 import sys
 import time
 import ConfigParser
+import argparse
 from zone import Zone
 
 
 class App():
     def __init__(self):
 
+        #Options
+        text = """The program compares the geometries of highways in OSM with
+those on one or more shapefiles and shows the results on a leaflet map
+as topojson or PNG tiles.
+"""
+        parser = argparse.ArgumentParser(description=text)
+        parser.add_argument("-e", "--export",
+                            help = """Export results from a previous analysis.
+Avoid the download of OSM data, database creation and analysis.""",
+                            action = "store_true")
+
         start = time.time()
+
+        self.args = parser.parse_args()
 
         # Configuration
         print "= Read config.cfg file ="
+        zones_config = self.read_config()
         self.zones = []
-        for name, zone_config in self.read_config().iteritems():
+        for name, zone_config in zones_config.iteritems():
             print "\n= %s =" % name
-            self.zones.append(Zone(name, zone_config))
+            self.zones.append(Zone(self, name, zone_config))
 
         print "\n= Export results ="
         for zone in self.zones:
@@ -43,7 +58,7 @@ class App():
         self.create_zonesinfo_js()
 
         end = time.time()
-        print "Execution time: ", end-start, "seconds."
+        print "Execution time: ", end - start, "seconds."
 
     def create_zonesinfo_js(self):
         zones_list_file = open("html/data/zones_info.js", "w")
