@@ -50,7 +50,7 @@ class Zone():
 
         self.statuses = ("notinosm", "onlyinosm")
 
-        if not app.args.export:
+        if not app.args.export_only:
             print ("\n= Donwload OSM data of the zone ="
                    "\n  highway=* != footway != cycleway")
             self.download_osm()
@@ -65,7 +65,7 @@ class Zone():
         if not os.path.isfile(self.database):
             sys.exit("\n* Error: it is not possible to continue; the database"
                      " with the analysis is missing. Try to execute the"
-                     " program again without --export option.")
+                     " program again without --export_only option.")
         self.read_boundaries_bbox()
         self.read_boundaries_center()
 

@@ -27,21 +27,25 @@ from zone import Zone
 class App():
     def __init__(self):
 
-        #Options
+        # Options
         text = """The program compares the geometries of highways in OSM with
 those on one or more shapefiles and shows the results on a leaflet map
 as topojson or PNG tiles.
 """
         parser = argparse.ArgumentParser(description=text)
         group = parser.add_mutually_exclusive_group()
-        group.add_argument("-e", "--export",
-                           help = """Export results from a previous analysis.
-Avoid the download of OSM data, database creation and analysis.""",
-                           action = "store_true")
+        group.add_argument("-e", "--export_only",
+                           help=("export the results from a previous analysis;"
+                                 " avoid the download of OSM data, database"
+                                 " creation and analysis"),
+                           action="store_true")
         group.add_argument("-p", "--print_zones",
-                           help = """Print zones'configuration and exit.""",
-                           action = "store_true")
-
+                           help="print zones'configuration and exit",
+                           action="store_true")
+        parser.add_argument("-z", "--zones",
+                            help=("consider only the zones whose name is in"
+                                  " this list"),
+                            nargs="+")
         start = time.time()
 
         self.args = parser.parse_args()
@@ -49,14 +53,23 @@ Avoid the download of OSM data, database creation and analysis.""",
         # Configuration
         print "= Read config.cfg file ="
         zones_config = self.read_config()
+        # Analyse only specified zones (--zones option)
+        if self.args.zones:
+            for zone_name in self.args.zones:
+                if zone_name not in zones_config:
+                    sys.exit("\n* Error: config.cfg does not contain a zone"
+                             "with this name: %s" % zone_name)
+
         self.print_zones(zones_config)
         if self.args.print_zones:
             sys.exit()
 
         self.zones = []
         for name, zone_config in zones_config.iteritems():
-            print "\n= %s =" % name
-            self.zones.append(Zone(self, name, zone_config))
+            if self.args.zones is None or (self.args.zones is not None
+               and name in self.args.zones):
+                print "\n= %s =" % name
+                self.zones.append(Zone(self, name, zone_config))
 
         print "\n= Export results ="
         for zone in self.zones:
@@ -139,12 +152,13 @@ compare-to-osm" target="_blank">Script code</a>';"""
     def print_zones(self, zones_config):
         print "\n= Zones ="
         for name, zone_config in zones_config.iteritems():
-            print "name:", name
-            print "admin_level:", zone_config["admin_level"]
-            print "boundaries shapefile:", zone_config["boundaries"]
-            print "highways shapefile:", zone_config["shapefile"]
-            print "output:", zone_config["output"]
-            print
+            if self.args.zones is None or (self.args.zones is not None
+               and name in self.args.zones):
+                print "\nname:", name
+                print "admin_level:", zone_config["admin_level"]
+                print "boundaries shapefile:", zone_config["boundaries"]
+                print "highways shapefile:", zone_config["shapefile"]
+                print "output:", zone_config["output"]
 
 
 if __name__ == "__main__":
