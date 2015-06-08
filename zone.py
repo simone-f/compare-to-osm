@@ -28,12 +28,12 @@ class Zone():
         # Input
         self.name = name
         self.admin_level = zone_config["admin_level"]
-        self.shapeFile = zone_config["shapefile"]
+        self.shape_file = zone_config["shapefile"]
         self.boundaries = zone_config["boundaries"]
         self.bbox = ""
         self.center = ""
 
-        self.osmFile = "data/OSM/%s.osm" % name
+        self.osm_file = "data/OSM/%s.osm" % name
         self.database = "data/%s.sqlite" % name
 
         # Output
@@ -51,9 +51,15 @@ class Zone():
         self.statuses = ("notinosm", "onlyinosm")
 
         if not app.args.export_only:
-            print ("\n= Donwload OSM data of the zone ="
-                   "\n  highway=* != footway != cycleway")
-            self.download_osm()
+
+            if not self.app.args.offline:
+                print ("\n= Donwload OSM data of the zone ="
+                       "\n  highway=* != footway != cycleway")
+                self.download_osm()
+            if not os.path.isfile(self.osm_file):
+                sys.exit("\n* Error: the file with OSM data is missing. Run"
+                         " the program again without --offline and --export"
+                         " options")
 
             print "\n= Create Spatialite database ="
             self.create_db()
@@ -75,7 +81,7 @@ class Zone():
         url += 'way(area)["highway"]'
         url += '["highway"!~"footway"]["highway"!~"cycleway"];'
         url += '(._;>;);out meta;'
-        cmd = "wget '%s' -O %s" % (url, self.osmFile)
+        cmd = "wget '%s' -O %s" % (url, self.osm_file)
         self.execute("cmd", cmd)
 
     def create_db(self):
@@ -98,7 +104,7 @@ class Zone():
         print "\n- import OSM data into database"
         cmd = ("ogr2ogr -f \"ESRI Shapefile\" data/OSM %s"
                " -sql \"SELECT osm_id FROM lines\""
-               " -lco SHPT=ARC") % self.osmFile
+               " -lco SHPT=ARC") % self.osm_file
         self.execute("cmd", cmd)
 
         cmd = ("spatialite_tool -i -shp data/OSM/lines -d %s"
@@ -121,7 +127,7 @@ class Zone():
         # Import open data
         print "\n- import open data"
         cmd = ("spatialite_tool -i -shp %s -d %s"
-               " -t open_data_ways -c CP1252 -s 4326") % (self.shapeFile,
+               " -t open_data_ways -c CP1252 -s 4326") % (self.shape_file,
                                                           self.database)
         self.execute("cmd", cmd)
 

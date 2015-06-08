@@ -46,6 +46,10 @@ as topojson or PNG tiles.
                             help=("consider only the zones whose name is in"
                                   " this list"),
                             nargs="+")
+        parser.add_argument("--offline",
+                            help="do not download data from OSM;"
+                                 " use the data downloaded in previous run",
+                            action="store_true")
         start = time.time()
 
         self.args = parser.parse_args()
