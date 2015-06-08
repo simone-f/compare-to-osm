@@ -94,11 +94,11 @@
             if (output == "vector") {
                 (function (i) {
                     var name = zones[i][0];
-                    $.getJSON('data/' + name + '/topojson/'+ name + '.GeoJSON', function (data) {
+                    $.getJSON('data/' + name + '/topojson/vector.GeoJSON', function (data) {
                         layers[i]["notinosm"].addData(topojson.feature(data,
-                                   data["objects"][name + "_notinosm"]));
+                                   data["objects"]["notinosm"]));
                         layers[i]["onlyinosm"].addData(topojson.feature(data,
-                                  data["objects"][name + "_onlyinosm"]));
+                                  data["objects"]["onlyinosm"]));
                     });
                 })(i);
             }
