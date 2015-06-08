@@ -82,12 +82,8 @@
                     var stringa = 'data/' + name + '/tiles/' + 'notinosm';
                     console.log(stringa);
                 layers.push({
-                    "notinosm": L.tileLayer('data/' + name + '/tiles/' + 'notinosm/{z}/{x}/{y}.png', {
-                                minZoom: 10,
-                                maxZoom: 15}),
-                    "onlyinosm": L.tileLayer('data/' + name + '/tiles/' + 'onlyinosm/{z}/{x}/{y}.png', {
-                                minZoom: 10,
-                                maxZoom: 15})
+                    "notinosm": L.tileLayer('data/' + name + '/tiles/' + 'notinosm/{z}/{x}/{y}.png'),
+                    "onlyinosm": L.tileLayer('data/' + name + '/tiles/' + 'onlyinosm/{z}/{x}/{y}.png')
                 });
             };
 
