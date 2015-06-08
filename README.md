@@ -1,35 +1,49 @@
 # compare-to-osm
 
-License: GPL v3
+This program compares the geometries of highways in OSM with those in one or more shapefiles. It generates GeoJSON and Shapefiles with highways missing in OSM and in the open data. The results are shown on a Leaflet map (in `html/index.html`) as Topojson files or PNG tiles.
 
-This script creates GeoJSON files by comparing the geometries of highways from OSM and open data released as shapefile.
-Results are displayed on a map in `html/index.html`.
-
-Output example: [compare-to-osm/index.html
+Output example with open data from Italy: [compare-to-osm/index.html
 ](https://dl.dropboxusercontent.com/u/41550819/OSM/compare-to-osm/index.html)
 
-The script ignores footway, cycleways and pedestrian highways.
+The program ignores footway, cycleways and pedestrian highways.
 
 ## Dependencies
-Data:
-
-* A shapefile with highways (WGS84) from the local council (the geometries must be Linestring).
-* A shapefile with the boundaries of the local council.
-
 Programs:
 
 * wget
 * spatialite_tool
 * ogr2ogr
 * topojson
+* mapnik
+* jinja2
 
 In Ubuntu, install with:
 
-        sudo apt-get install spatialite-bin gdal-bin nodejs
+        sudo apt-get install spatialite-bin gdal-bin nodejs python-mapnik python-jinja2
         sudo npm install -g topojson
+        
+Data:
+
+* a WGS84 shapefile with open data regarding highways from the the zone you are interested (e.g. a local council); geometries must be Linestring
+* a Shapefile with the boundaries of the zone.
 
 ## Usage
-* The first time, write into `config.cfg` file: `name`, `admin_level` and paths to local council's highways and boundaries shapefiles.
-* Execute `pyhton ./script.py` to create or update the data file: `html/ways.GeoJSON`.
-* (Optional) Update in `html/info.js` the text shown on the web page.
-* Open `index.html` in a browser.
+### Configuration
+* Create a `config.cfg` file with one section for each zone that you want to analyse. See `./config_example.cfg` as an example.
+* (Optional) Write in `./html/data/info.js` the text that you want to show in the box over the map in `./html/index.html`.
+
+### Execution
+For the list of options, run:
+
+        pyhton ./compare-to-osm.py -h
+        
+Analyse the data descripted in `config.cfg` and create/update the output files (`./data/out/*`):
+
+        pyhton ./compare-to-osm.py
+        
+Open `index.html` in a browser to see the results.
+
+## Development
+License: GPL v3
+
+Author: Simone F.

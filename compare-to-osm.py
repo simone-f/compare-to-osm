@@ -126,7 +126,7 @@ class App():
             zones_config[name]["shapefile"] = shapefile[:-4]
             zones_config[name]["output"] = config.get(name, 'output')
             if not config.has_option(name, 'min_zoom'):
-                zones_config[name]["min_zoom"] = 10
+                zones_config[name]["min_zoom"] = 5
             else:
                 zones_config[name]["min_zoom"] = int(config.get(name,
                                                                 'min_zoom'))
