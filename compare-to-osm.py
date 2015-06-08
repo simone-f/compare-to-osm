@@ -35,11 +35,6 @@ class App():
                 " or PNG tiles.")
         parser = argparse.ArgumentParser(description=text)
         group = parser.add_mutually_exclusive_group()
-        group.add_argument("-e", "--export_only",
-                           help=("export the results from a previous analysis;"
-                                 " avoid the download of OSM data, database"
-                                 " creation and analysis"),
-                           action="store_true")
         group.add_argument("-p", "--print_zones",
                            help="print zones'configuration and exit",
                            action="store_true")
@@ -47,10 +42,15 @@ class App():
                             help=("consider only the zones whose name is in"
                                   " this list"),
                             nargs="+")
-        parser.add_argument("--offline",
-                            help="do not download data from OSM;"
-                                 " use the data downloaded in previous run",
-                            action="store_true")
+        group.add_argument("--offline",
+                           help="do not download data from OSM;"
+                                " use the data downloaded in previous run",
+                           action="store_true")
+        group.add_argument("-e", "--export_only",
+                           help=("export the results from a previous analysis;"
+                                 " avoid the download of OSM data, database"
+                                 " creation and analysis"),
+                           action="store_true")
         start = time.time()
 
         self.args = parser.parse_args()
