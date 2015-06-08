@@ -28,10 +28,11 @@ class App():
     def __init__(self):
 
         # Options
-        text = """The program compares the geometries of highways in OSM with
-those on one or more shapefiles and shows the results on a leaflet map
-as topojson or PNG tiles.
-"""
+        text = ("The program compares the geometries of highways in OSM with"
+                " those in one or more shapefiles. It generates GeoJSON and"
+                " shapefiles with highways missing in OSM and in the open"
+                " data. The results are shown on a leaflet map as topojson"
+                " or PNG tiles.")
         parser = argparse.ArgumentParser(description=text)
         group = parser.add_mutually_exclusive_group()
         group.add_argument("-e", "--export_only",
@@ -104,8 +105,8 @@ as topojson or PNG tiles.
     def read_config(self):
         if not os.path.isfile('config.cfg'):
             open('config.cfg', 'a').close()
-            sys.exit('Please, fill informations in \'config.cfg\'. See\
- \'config_example.cfg\' as an example')
+            sys.exit("\n* Please, add informations to 'config.cfg'. See"
+                     "'config_example.cfg' as an example.")
         config = ConfigParser.RawConfigParser()
         config.read('config.cfg')
 

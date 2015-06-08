@@ -53,19 +53,19 @@ class Zone():
         if not app.args.export_only:
 
             if not self.app.args.offline:
-                print ("\n= Donwload OSM data of the zone ="
-                       "\n  highway=* != footway != cycleway")
+                print ("\n== Donwload OSM data of the zone =="
+                       "\n   highway=* != footway != cycleway")
                 self.download_osm()
             if not os.path.isfile(self.osm_file):
                 sys.exit("\n* Error: the file with OSM data is missing. Run"
                          " the program again without --offline and --export"
                          " options")
 
-            print "\n= Create Spatialite database ="
+            print "\n== Create Spatialite database =="
             self.create_db()
 
-            print ("\n= Calculate differences between OSM/open data ways"
-                   " and their buffers =")
+            print ("\n== Calculate differences between OSM/open data ways"
+                   " and their buffers ==")
             for status in self.statuses:
                 self.find_ways(status)
         if not os.path.isfile(self.database):
