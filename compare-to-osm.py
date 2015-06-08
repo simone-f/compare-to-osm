@@ -33,10 +33,14 @@ those on one or more shapefiles and shows the results on a leaflet map
 as topojson or PNG tiles.
 """
         parser = argparse.ArgumentParser(description=text)
-        parser.add_argument("-e", "--export",
-                            help = """Export results from a previous analysis.
+        group = parser.add_mutually_exclusive_group()
+        group.add_argument("-e", "--export",
+                           help = """Export results from a previous analysis.
 Avoid the download of OSM data, database creation and analysis.""",
-                            action = "store_true")
+                           action = "store_true")
+        group.add_argument("-p", "--print_zones",
+                           help = """Print zones'configuration and exit.""",
+                           action = "store_true")
 
         start = time.time()
 
@@ -45,6 +49,10 @@ Avoid the download of OSM data, database creation and analysis.""",
         # Configuration
         print "= Read config.cfg file ="
         zones_config = self.read_config()
+        self.print_zones(zones_config)
+        if self.args.print_zones:
+            sys.exit()
+
         self.zones = []
         for name, zone_config in zones_config.iteritems():
             print "\n= %s =" % name
@@ -126,11 +134,9 @@ compare-to-osm" target="_blank">Script code</a>';"""
             info_file.write(text)
             info_file.close()
 
-        self.print_local_councils_data(zones_config)
-
         return zones_config
 
-    def print_local_councils_data(self, zones_config):
+    def print_zones(self, zones_config):
         print "\n= Zones ="
         for name, zone_config in zones_config.iteritems():
             print "name:", name
