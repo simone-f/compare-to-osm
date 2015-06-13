@@ -96,7 +96,8 @@ class RenderThread:
         # Render image with default Agg renderer
         im = mapnik.Image(render_size, render_size)
         mapnik.render(self.m, im)
-        im.save(tile_uri, 'png256')
+        if len(im.tostring('png256')) != 116:
+            im.save(tile_uri, 'png256:z=1')
 
 
     def loop(self):
@@ -114,12 +115,12 @@ class RenderThread:
                 exists= "exists"
             else:
                 self.render_tile(tile_uri, x, y, z)
-            bytes=os.stat(tile_uri)[6]
+            """bytes=os.stat(tile_uri)[6]
             empty= ''
             if bytes == 103:
-                empty = " Empty Tile "
+                empty = " Empty Tile """
             self.printLock.acquire()
-            print name, ":", z, x, y, exists#, empty
+            #print name, ":", z, x, y, exists#, empty
             self.printLock.release()
             self.q.task_done()
 
