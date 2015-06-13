@@ -11,9 +11,9 @@ class Renderer:
         stylesheet_template = 'rendering/templates/style.xml'
         self.stylesheet = 'rendering/style.xml'
 
-        self.image = os.path.join(zone.export_dir_png, '%s.png' % (
+        self.image = os.path.join(zone.map_data_dir_png, '%s.png' % (
                                   status))
-        self.tiles_dir = os.path.join(self.zone.export_dir_tiles,
+        self.tiles_dir = os.path.join(self.zone.map_data_dir_tiles,
                                       status) + "/"
         os.makedirs(self.tiles_dir)
 

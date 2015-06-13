@@ -25,6 +25,8 @@ from rendering.renderer import Renderer
 class Zone():
     def __init__(self, app, name, zone_config):
         self.app = app
+        self.statuses = ("notinosm", "onlyinosm")
+
         # Input
         self.name = name
         self.admin_level = zone_config["admin_level"]
@@ -34,46 +36,49 @@ class Zone():
         self.center = ""
 
         self.osm_file = "data/OSM/%s.osm" % name
-        self.database = "data/%s.sqlite" % name
 
         # Output
         self.output = zone_config["output"]
         self.min_zoom = zone_config["min_zoom"]
         self.max_zoom = zone_config["max_zoom"]
 
+        self.database = "data/out/%s.sqlite" % name
         self.output_dir = os.path.join("data", "out", self.name)
+        self.geojson_files = [os.path.join(self.output_dir,
+                              "%s.GeoJSON" % status)
+                              for status in self.statuses]
 
-        self.export_dir = os.path.join("html", "data", self.name)
-        self.export_dir_topojson = os.path.join(self.export_dir, "topojson")
-        self.export_dir_png = os.path.join(self.export_dir, "PNG")
-        self.export_dir_tiles = os.path.join(self.export_dir, "tiles")
+        self.shapefiles = [os.path.join(self.output_dir,
+                           "%s.shp" % status)
+                           for status in self.statuses]
 
-        self.statuses = ("notinosm", "onlyinosm")
+        # Export to map
+        self.map_data_dir = os.path.join("html", "data", self.name)
+        self.map_data_dir_topojson = os.path.join(self.map_data_dir,
+                                                  "topojson")
+        self.map_data_dir_png = os.path.join(self.map_data_dir, "PNG")
+        self.map_data_dir_tiles = os.path.join(self.map_data_dir, "tiles")
 
-        if not app.args.export_only:
+    def analyse(self):
+        if not self.app.args.offline:
+            print ("\n== Donwload OSM data of the zone =="
+                   "\n   highway=* != footway != cycleway")
+            self.download_osm()
+        if not os.path.isfile(self.osm_file):
+            sys.exit("\n* Error: the file with OSM data is missing. Run"
+                     " the program again without --offline and --export"
+                     " options")
 
-            if not self.app.args.offline:
-                print ("\n== Donwload OSM data of the zone =="
-                       "\n   highway=* != footway != cycleway")
-                self.download_osm()
-            if not os.path.isfile(self.osm_file):
-                sys.exit("\n* Error: the file with OSM data is missing. Run"
-                         " the program again without --offline and --export"
-                         " options")
+        print "\n== Create Spatialite database =="
+        self.create_db()
 
-            print "\n== Create Spatialite database =="
-            self.create_db()
+        print ("\n== Calculate differences between OSM/open data ways"
+               " and their buffers ==")
+        for status in self.statuses:
+            self.find_ways(status)
 
-            print ("\n== Calculate differences between OSM/open data ways"
-                   " and their buffers ==")
-            for status in self.statuses:
-                self.find_ways(status)
-        if not os.path.isfile(self.database):
-            sys.exit("\n* Error: it is not possible to continue; the database"
-                     " with the analysis is missing. Try to execute the"
-                     " program again without --export_only option.")
-        self.read_boundaries_bbox()
-        self.read_boundaries_center()
+        print ("\n== Export analysis' result as GeoJSON and Shapefiles ==")
+        self.export()
 
     def download_osm(self):
         url = 'http://overpass.osm.rambler.ru/cgi/interpreter?data=area'
@@ -259,49 +264,70 @@ class Zone():
     def export(self):
         """Export results.
            If output: "vector":
-           Spatialite --> GeoJSON --> TopoJSON for Leaflet
-           if output: "raster":
-           Spatialite --> Shapefile --> (mapnik) PNG tiles for Leaflet
+           Spatialite --> GeoJSON
+           Spatialite --> Shapefile
         """
-        print "\n- Export results for zone:", self.name
+        # Remove old files and create missing directories
+        print "Remove old files..."
+        self.remove_old_files_and_create_dirs(self.output_dir)
+        print ""
+
+        for i, status in enumerate(self.statuses):
+            cmd = ("ogr2ogr -f \"GeoJSON\" \"%s\" %s"
+                   " -sql \"SELECT Geometry"
+                   " FROM %s\"") % (self.geojson_files[i],
+                                    self.database,
+                                    status)
+            self.execute("cmd", cmd)
+
+            print ""
+
+            cmd = ("ogr2ogr -f \"ESRI Shapefile\" \"%s\" %s"
+                   " -sql \"SELECT Geometry FROM %s\"") % (self.shapefiles[i],
+                                                           self.database,
+                                                           status)
+            self.execute("cmd", cmd)
+
+    def update_map_data(self):
+        """Update data files used by Leaflet.
+           If output: "vector":
+               GeoJSON --> TopoJSON
+           if output: "raster":
+               Shapefile --> (mapnik) PNG tiles
+        """
+        print "\n- Update map data for zone:", self.name
+
+        if not os.path.isfile(self.database):
+            sys.exit("\n* Error: it is not possible to continue; the database"
+                     " with the analysis is missing. Try to execute the"
+                     " program again without --export_only option.")
+        self.read_boundaries_bbox()
+        self.read_boundaries_center()
 
         # Remove old files and create missing directories
         print "Remove old files..."
-        for directory in (self.output_dir, self.export_dir_topojson,
-                          self.export_dir_png,
-                          self.export_dir_tiles):
+        for directory in (self.map_data_dir_topojson,
+                          self.map_data_dir_png,
+                          self.map_data_dir_tiles):
             self.remove_old_files_and_create_dirs(directory)
 
         print ""
         if self.output == "vector":
-            geojson_files = [os.path.join(self.output_dir,
-                             "%s.GeoJSON" % status)
-                             for status in self.statuses]
+            cmd = "topojson -q 10000000 -o %s %s" % (
+                  os.path.join(self.map_data_dir_topojson, "vector.GeoJSON"),
+                  " ".join(self.geojson_files))
+            self.execute("cmd", cmd)
+
+        elif self.output == "raster":
             for i, status in enumerate(self.statuses):
-                cmd = ("ogr2ogr -f \"GeoJSON\" \"%s\" %s"
+                cmd = ("ogr2ogr -f \"ESRI Shapefile\" \"%s\" %s"
                        " -sql \"SELECT Geometry"
-                       " FROM %s\"") % (geojson_files[i],
+                       " FROM %s\"") % (self.shapefiles[i],
                                         self.database,
                                         status)
                 self.execute("cmd", cmd)
 
-            cmd = "topojson -q 10000000 -o %s %s" % (
-                  os.path.join(self.export_dir_topojson, "vector.GeoJSON"),
-                  " ".join(geojson_files))
-            self.execute("cmd", cmd)
-
-        elif self.output == "raster":
-            shapefiles = [os.path.join(self.output_dir,
-                          "%s.shp" % status)
-                          for status in self.statuses]
-            for i, status in enumerate(self.statuses):
-                cmd = ("ogr2ogr -f \"ESRI Shapefile\" \"%s\" %s"
-                       " -sql \"SELECT Geometry FROM %s\"") % (shapefiles[i],
-                                                               self.database,
-                                                               status)
-                self.execute("cmd", cmd)
-
-                Renderer(self, status, shapefiles[i])
+                Renderer(self, status, self.shapefiles[i])
 
     def remove_old_files_and_create_dirs(self, directory):
         if os.path.isdir(directory):

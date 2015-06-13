@@ -34,26 +34,38 @@ class App():
                 " data. The results are shown on a leaflet map as topojson"
                 " or PNG tiles.")
         parser = argparse.ArgumentParser(description=text)
-        group = parser.add_mutually_exclusive_group()
-        group.add_argument("-p", "--print_zones",
-                           help="print zones'configuration and exit",
-                           action="store_true")
+        parser.add_argument("-p", "--print_zones_configuration",
+                            help="print zones'configuration and exit",
+                            action="store_true")
+
+        parser.add_argument("-a", "--analyse",
+                            help=("download OSM data, compare with open data"
+                                  " and produce output files"),
+                            action="store_true")
+
+        parser.add_argument("-e", "--update_map",
+                            help=("read analysis'output files and"
+                                  " update map's data"),
+                            action="store_true")
+
         parser.add_argument("-z", "--zones",
                             help=("consider only the zones whose name is in"
-                                  " this list"),
+                                  " this list and ignore other zones"
+                                  " in config.cfg"),
                             nargs="+")
-        group.add_argument("--offline",
-                           help="do not download data from OSM;"
-                                " use the data downloaded in previous run",
-                           action="store_true")
-        group.add_argument("-e", "--export_only",
-                           help=("export the results from a previous analysis;"
-                                 " avoid the download of OSM data, database"
-                                 " creation and analysis"),
-                           action="store_true")
+
+        parser.add_argument("--offline",
+                            help="do not download data from OSM;"
+                                 " use the data downloaded in previous run",
+                            action="store_true")
+
         start = time.time()
 
         self.args = parser.parse_args()
+
+        if len(sys.argv) == 1:
+            parser.print_help()
+            sys.exit(1)
 
         # Configuration
         print "= Read config.cfg file ="
@@ -66,22 +78,30 @@ class App():
                              "with this name: %s" % zone_name)
 
         self.print_zones(zones_config)
-        if self.args.print_zones:
+        if self.args.print_zones_configuration:
             sys.exit()
+
+        if not (self.args.analyse or self.args.update_map):
+            sys.exit("\nThere is nothing left for me to tell you.")
 
         self.zones = []
         for name, zone_config in zones_config.iteritems():
             if self.args.zones is None or (self.args.zones is not None
                and name in self.args.zones):
                 print "\n= %s =" % name
-                self.zones.append(Zone(self, name, zone_config))
+                zone = Zone(self, name, zone_config)
+                if self.args.analyse:
+                    # Download OSM data, compare with open data
+                    # and produce output files
+                    zone.analyse()
+                self.zones.append(zone)
 
-        print "\n= Export results ="
-        for zone in self.zones:
-            zone.export()
-
-        # Create js file with list of zones
-        self.create_zonesinfo_js()
+        if self.args.update_map:
+            print "\n= Update map data ="
+            for zone in self.zones:
+                zone.update_map_data()
+            # Create js file with list of zones
+            self.create_zonesinfo_js()
 
         end = time.time()
         print "Execution time: ", end - start, "seconds."
