@@ -163,9 +163,6 @@ class App():
                     break
             if new_zone:
                 (bbox, center, analysis_time) = ("", "", "")
-
-            print name, "new zone? ", new_zone
-
             zones_config[name]["bbox"] = bbox
             zones_config[name]["center"] = center
             zones_config[name]["analysis_time"] = analysis_time

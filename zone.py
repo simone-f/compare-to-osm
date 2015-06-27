@@ -83,6 +83,8 @@ class Zone():
         self.export()
 
         self.analysis_time = time.strftime("%H-%d/%m/%Y")
+
+        print "\n== Read bbox and center coordinates of the zone =="
         self.read_boundaries_bbox()
         self.read_boundaries_center()
 
@@ -285,9 +287,6 @@ class Zone():
                                     self.database,
                                     status)
             self.execute("cmd", cmd)
-
-            print ""
-
             cmd = ("ogr2ogr -f \"ESRI Shapefile\" \"%s\" %s"
                    " -sql \"SELECT Geometry FROM %s\"") % (self.shapefiles[i],
                                                            self.database,
@@ -322,13 +321,6 @@ class Zone():
 
         elif self.output == "raster":
             for i, status in enumerate(self.statuses):
-                cmd = ("ogr2ogr -f \"ESRI Shapefile\" \"%s\" %s"
-                       " -sql \"SELECT Geometry"
-                       " FROM %s\"") % (self.shapefiles[i],
-                                        self.database,
-                                        status)
-                self.execute("cmd", cmd)
-
                 Renderer(self, status, self.shapefiles[i])
 
     def remove_old_files_and_create_dirs(self, directory):
