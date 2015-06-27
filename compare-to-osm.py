@@ -44,7 +44,7 @@ class App():
                                   " and produce output files"),
                             action="store_true")
 
-        parser.add_argument("-e", "--update_map",
+        parser.add_argument("-m", "--update_map",
                             help=("read analysis'output files and"
                                   " update map's data"),
                             action="store_true")
@@ -53,7 +53,8 @@ class App():
                             help=("consider only the zones whose name is in"
                                   " this list and ignore other zones"
                                   " in config.cfg"),
-                            nargs="+")
+                            nargs="+",
+                            metavar=("ZONENAME"))
 
         parser.add_argument("--offline",
                             help="do not download data from OSM;"
