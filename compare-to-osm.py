@@ -22,6 +22,7 @@ import time
 import ConfigParser
 import argparse
 from zone import Zone
+import json
 
 
 class App():
@@ -69,13 +70,14 @@ class App():
 
         # Configuration
         print "= Read config.cfg file ="
+        self.ZONESINFOFILE = "html/data/zones_info.json"
         zones_config = self.read_config()
         # Analyse only specified zones (--zones option)
         if self.args.zones:
             for zone_name in self.args.zones:
                 if zone_name not in zones_config:
                     sys.exit("\n* Error: config.cfg does not contain a zone"
-                             "with this name: %s" % zone_name)
+                             " with this name: %s" % zone_name)
 
         self.print_zones(zones_config)
         if self.args.print_zones_configuration:
@@ -84,43 +86,33 @@ class App():
         if not (self.args.analyse or self.args.update_map):
             sys.exit("\nThere is nothing left for me to tell you.")
 
+        self.allZones = []
         self.zones = []
         for name, zone_config in zones_config.iteritems():
-            if self.args.zones is None or (self.args.zones is not None
-               and name in self.args.zones):
-                print "\n= %s =" % name
-                zone = Zone(self, name, zone_config)
-                if self.args.analyse:
-                    # Download OSM data, compare with open data
-                    # and produce output files
-                    zone.analyse()
+            zone = Zone(self, name, zone_config)
+            self.allZones.append(zone)
+            if not self.args.zones or name in self.args.zones:
                 self.zones.append(zone)
 
-        if self.args.update_map:
-            print "\n= Update map data ="
+        # Analyse
+        if self.args.analyse:
             for zone in self.zones:
+                print "\n= Analyse: %s =" % zone.name
+                # Download OSM data, compare with open data
+                # and produce output files
+                zone.analyse()
+
+        # Update map
+        if self.args.update_map:
+            for zone in self.zones:
+                print "\n= Update map data: %s =" % zone.name
                 zone.update_map_data()
-            # Create js file with list of zones
-            self.create_zonesinfo_js()
+
+        # Update JSON file with list of zones
+        self.update_zones_info_file()
 
         end = time.time()
-        print "Execution time: ", end - start, "seconds."
-
-    def create_zonesinfo_js(self):
-        zones_list_file = open("html/data/zones_info.js", "w")
-        text = ("// Automatically generated file"
-                "\nvar zones = [")
-        for i, zone in enumerate(self.zones):
-            if i != 0:
-                text += ","
-            text += "['%s', %s, %s, '%s']" % (
-                zone.name,
-                zone.bbox,
-                zone.center,
-                zone.output)
-        text += "];"
-        zones_list_file.write(text)
-        zones_list_file.close()
+        print "\nExecution time: ", end - start, "seconds."
 
     def read_config(self):
         if not os.path.isfile('config.cfg'):
@@ -155,6 +147,28 @@ class App():
             else:
                 zones_config[name]["max_zoom"] = int(config.get(name,
                                                                 'max_zoom'))
+            # Read zones info from zones_info.json
+            if not os.path.exists(self.ZONESINFOFILE):
+                zones_info = {"zones": []}
+            else:
+                with open(self.ZONESINFOFILE, "r") as fp:
+                    zones_info = json.load(fp)
+            new_zone = True
+            for oldzone in zones_info["zones"]:
+                if oldzone["name"] == name:
+                    new_zone = False
+                    bbox = oldzone["bbox"]
+                    center = oldzone["center"]
+                    analysis_time =  oldzone["analysis_time"]
+                    break
+            if new_zone:
+                (bbox, center, analysis_time) = ("", "", "")
+
+            print name, "new zone? ", new_zone
+
+            zones_config[name]["bbox"] = bbox
+            zones_config[name]["center"] = center
+            zones_config[name]["analysis_time"] = analysis_time
 
         # Create missing directories and files
         osmdir = os.path.join("data", "OSM")
@@ -173,6 +187,21 @@ compare-to-osm" target="_blank">Script code</a>';"""
             info_file.close()
 
         return zones_config
+
+    def update_zones_info_file(self):
+        zones_info = {"zones": []}
+        for zone in self.allZones:
+            zones_info["zones"].append({"name": zone.name,
+                                        "bbox": zone.bbox,
+                                        "center": zone.center,
+                                        "output": zone.output,
+                                        "analysis_time": zone.analysis_time
+                                        })
+        with open(self.ZONESINFOFILE, "w") as fp:
+            fp.write(json.dumps(zones_info,
+                                sort_keys=True,
+                                indent=4,
+                                separators=(',', ': ')))
 
     def print_zones(self, zones_config):
         print "\n= Zones ="

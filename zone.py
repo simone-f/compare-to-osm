@@ -20,6 +20,7 @@ import os
 import sys
 from subprocess import call, Popen, PIPE
 from rendering.renderer import Renderer
+import time
 
 
 class Zone():
@@ -32,8 +33,9 @@ class Zone():
         self.admin_level = zone_config["admin_level"]
         self.shape_file = zone_config["shapefile"]
         self.boundaries = zone_config["boundaries"]
-        self.bbox = ""
-        self.center = ""
+        self.bbox = zone_config["bbox"]
+        self.center = zone_config["center"]
+        self.analysis_time = zone_config["analysis_time"]
 
         self.osm_file = "data/OSM/%s.osm" % name
 
@@ -79,6 +81,10 @@ class Zone():
 
         print ("\n== Export analysis' result as GeoJSON and Shapefiles ==")
         self.export()
+
+        self.analysis_time = time.strftime("%H-%d/%m/%Y")
+        self.read_boundaries_bbox()
+        self.read_boundaries_center()
 
     def download_osm(self):
         url = 'http://overpass.osm.rambler.ru/cgi/interpreter?data=area'
@@ -295,14 +301,10 @@ class Zone():
            if output: "raster":
                Shapefile --> (mapnik) PNG tiles
         """
-        print "\n- Update map data for zone:", self.name
-
         if not os.path.isfile(self.database):
             sys.exit("\n* Error: it is not possible to continue; the database"
                      " with the analysis is missing. Try to execute the"
                      " program again without --export_only option.")
-        self.read_boundaries_bbox()
-        self.read_boundaries_center()
 
         # Remove old files and create missing directories
         print "Remove old files..."
