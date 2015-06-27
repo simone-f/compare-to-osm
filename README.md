@@ -37,9 +37,13 @@ For the list of options, run:
 
         pyhton ./compare-to-osm.py -h
         
-Analyse the data descripted in `config.cfg` and create/update the output files (`./data/out/*`):
+Analyse the data descripted in `config.cfg` and create or update the output files (`./data/out/*`):
 
-        pyhton ./compare-to-osm.py
+        pyhton ./compare-to-osm.py --analyse
+        
+Read output files and generate the files used by the map (`./html/data/*`)
+
+        pyhton ./compare-to-osm.py --update_map
         
 Open `index.html` in a browser to see the results.
 
