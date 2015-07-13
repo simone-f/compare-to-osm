@@ -67,9 +67,7 @@ class Zone():
                    "\n   highway=* != footway != cycleway")
             self.download_osm()
         if not os.path.isfile(self.osm_file):
-            sys.exit("\n* Error: the file with OSM data is missing. Run"
-                     " the program again without --offline and --export"
-                     " options")
+            sys.exit("\n* Error: the file with OSM data is missing.")
 
         print "\n== Create Spatialite database =="
         self.create_db()
@@ -302,8 +300,7 @@ class Zone():
         """
         if not os.path.isfile(self.database):
             sys.exit("\n* Error: it is not possible to continue; the database"
-                     " with the analysis is missing. Try to execute the"
-                     " program again without --export_only option.")
+                     " with the analysis is missing.")
 
         # Remove old files and create missing directories
         print "Remove old files..."

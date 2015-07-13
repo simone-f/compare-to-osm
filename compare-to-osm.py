@@ -160,7 +160,7 @@ class App():
                     new_zone = False
                     bbox = oldzone["bbox"]
                     center = oldzone["center"]
-                    analysis_time =  oldzone["analysis_time"]
+                    analysis_time = oldzone["analysis_time"]
                     break
             if new_zone:
                 (bbox, center, analysis_time) = ("", "", "")
