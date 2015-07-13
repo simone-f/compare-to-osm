@@ -101,7 +101,7 @@ class App():
                 print "\n= Analyse: %s =" % zone.name
                 # Download OSM data, compare with open data
                 # and produce output files
-                zone.analyse()
+                zone.comparator.analyse()
 
         # Update map
         if self.args.update_map:
@@ -127,6 +127,7 @@ class App():
         zones_config = {}
         for name in config.sections():
             zones_config[name] = {}
+            zones_config[name]["comparator"] = config.get(name, 'comparator')
             zones_config[name]["admin_level"] = config.get(name, 'admin_level')
             boundaries = config.get(name, 'boundaries')
             shapefile = config.get(name, 'shapefile')
@@ -189,7 +190,8 @@ compare-to-osm" target="_blank">Script code</a>';"""
     def update_zones_info_file(self):
         zones_info = {"zones": []}
         for zone in self.allZones:
-            zones_info["zones"].append({"name": zone.name,
+            zones_info["zones"].append({"comparator": zone.comparator.name,
+                                        "name": zone.name,
                                         "bbox": zone.bbox,
                                         "center": zone.center,
                                         "output": zone.output,
@@ -206,7 +208,8 @@ compare-to-osm" target="_blank">Script code</a>';"""
         for name, zone_config in zones_config.iteritems():
             if self.args.zones is None or (self.args.zones is not None
                and name in self.args.zones):
-                print "\nname:", name
+                print "\ncomparator:", zone_config["comparator"]
+                print "name:", name
                 print "admin_level:", zone_config["admin_level"]
                 print "boundaries shapefile:", zone_config["boundaries"]
                 print "highways shapefile:", zone_config["shapefile"]

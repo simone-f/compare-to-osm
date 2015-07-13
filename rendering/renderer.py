@@ -6,10 +6,11 @@ import jinja2
 
 
 class Renderer:
-    def __init__(self, zone, status, shapefile):
+    def __init__(self, zone, status, shapefile, geometry_type):
         self.zone = zone
-        stylesheet_template = 'rendering/templates/style.xml'
-        self.stylesheet = 'rendering/style.xml'
+        stylesheet_template = ('rendering/templates/'
+                               'style_%s.xml') % geometry_type
+        self.stylesheet = 'rendering/style_%s.xml' % geometry_type
 
         self.image = os.path.join(zone.map_data_dir_png, '%s.png' % (
                                   status))
