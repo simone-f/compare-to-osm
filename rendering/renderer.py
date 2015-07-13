@@ -6,15 +6,15 @@ import jinja2
 
 
 class Renderer:
-    def __init__(self, zone, status, shapefile, geometry_type):
-        self.zone = zone
-        stylesheet_template = ('rendering/templates/'
-                               'style_%s.xml') % geometry_type
-        self.stylesheet = 'rendering/style_%s.xml' % geometry_type
+    def __init__(self, task, status, shapefile, geometry_type):
+        self.task = task
+        stylesheet_template = ("rendering/templates/"
+                               "style_%s.xml") % geometry_type
+        self.stylesheet = "rendering/style_%s.xml" % geometry_type
 
-        self.image = os.path.join(zone.map_data_dir_png, '%s.png' % (
-                                  status))
-        self.tiles_dir = os.path.join(self.zone.map_data_dir_tiles,
+        self.image = os.path.join(str(task.map_data_dir_png),
+                                  '%s.png' % status)
+        self.tiles_dir = os.path.join(self.task.map_data_dir_tiles,
                                       status) + "/"
         os.makedirs(self.tiles_dir)
 
@@ -47,9 +47,10 @@ class Renderer:
         print "\n- Render tiles"
 
         # Render
-        render_tiles(self.zone.bbox, self.stylesheet,
-                     self.tiles_dir, self.zone.min_zoom,
-                     self.zone.max_zoom)
+        print self.task.bbox, self.task.database
+        render_tiles(self.task.bbox, self.stylesheet,
+                     str(self.tiles_dir), self.task.min_zoom,
+                     self.task.max_zoom)
 
         # Delete empty folders
         self.remove_empty_directories(self.tiles_dir)
@@ -57,7 +58,7 @@ class Renderer:
 
         # Optimize pngs
         # call(("find . -name \"%s*.png\""
-        #      " -exec optipng {} \;") % self.zone.tiles_directory,
+        #      " -exec optipng {} \;") % self.task.tiles_directory,
         #                                shell=True)
 
     def remove_empty_directories(self, path):

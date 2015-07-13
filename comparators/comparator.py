@@ -22,22 +22,22 @@ import time
 
 
 class Comparator:
-    def __init__(self, zone):
-        self.app = zone.app
-        self.zone = zone
+    def __init__(self, task):
+        self.app = task.app
+        self.task = task
 
     def download_osm(self):
         url = 'http://overpass.osm.rambler.ru/cgi/interpreter?'
         url += self.overpass_query
-        cmd = "wget '%s' -O %s" % (url, self.zone.osm_file)
-        self.zone.execute("cmd", cmd)
+        cmd = "wget '%s' -O %s" % (url, self.task.osm_file)
+        self.task.execute("cmd", cmd)
 
     def analyse(self):
         if not self.app.args.offline:
-            print ("\n== Donwload OSM data of the zone =="
+            print ("\n== Donwload OSM data of the task =="
                    "\n   highway=* != footway != cycleway")
             self.download_osm()
-        if not os.path.isfile(self.zone.osm_file):
+        if not os.path.isfile(self.task.osm_file):
             sys.exit("\n* Error: the file with OSM data is missing.")
 
         print "\n== Create Spatialite database =="
@@ -45,17 +45,17 @@ class Comparator:
 
         print ("\n== Calculate differences between OSM/open data ways"
                " and their buffers ==")
-        for status in self.zone.statuses:
+        for status in self.task.statuses:
             self.find_ways(status)
 
         print ("\n== Export analysis' result as GeoJSON and Shapefiles ==")
         self.export()
 
-        self.analysis_time = time.strftime("%H-%d/%m/%Y")
+        self.task.analysis_time = time.strftime("%d/%m/%Y")
 
         print "\n== Read bbox and center coordinates of the zone =="
-        self.zone.read_boundaries_bbox()
-        self.zone.read_boundaries_center()
+        self.task.read_boundaries_bbox()
+        self.task.read_boundaries_center()
 
     def multilines_to_line(self, table_in, table_out):
         print ("\n- convert multilinestring to linestring"
@@ -66,17 +66,17 @@ class Comparator:
             FROM %s
             WHERE GeometryType(Geometry) = 'MULTILINESTRING';""" % (table_out,
                                                                     table_in)
-        self.zone.execute("qry", sql)
+        self.task.execute("qry", sql)
         sql = """
             SELECT RecoverGeometryColumn('%s_MULTILINESTRING', 'Geometry',
                 4326, 'MULTILINESTRING', 'XY');
             """ % (table_out)
-        self.zone.execute("qry", sql)
+        self.task.execute("qry", sql)
         # Convert MULTILINESTRING to linestring and union with LINESTRINGs
         sql = (".elemgeo %s_MULTILINESTRING Geometry"
                " %s_SINGLELINESTRING pk_elem multi_id;") % (table_out,
                                                             table_out)
-        self.zone.execute("qry", sql)
+        self.task.execute("qry", sql)
         sql = """
             CREATE TABLE %s AS
             SELECT Geometry
@@ -85,7 +85,7 @@ class Comparator:
             SELECT Geometry
             FROM %s WHERE GeometryType(Geometry) = 'LINESTRING';
             """ % (table_out, table_out, table_in)
-        self.zone.execute("qry", sql)
+        self.task.execute("qry", sql)
 
     def export(self):
         """Export results.
@@ -95,19 +95,19 @@ class Comparator:
         """
         # Remove old files and create missing directories
         print "Remove old files..."
-        self.zone.remove_old_files_and_create_dirs(self.zone.output_dir)
+        self.task.remove_old_files_and_create_dirs(self.task.output_dir)
         print ""
 
-        for i, status in enumerate(self.zone.statuses):
+        for i, status in enumerate(self.task.statuses):
             cmd = ("ogr2ogr -f \"GeoJSON\" \"%s\" %s"
                    " -sql \"SELECT Geometry"
-                   " FROM %s\"") % (self.zone.geojson_files[i],
-                                    self.zone.database,
+                   " FROM %s\"") % (self.task.geojson_files[i],
+                                    self.task.database,
                                     status)
-            self.zone.execute("cmd", cmd)
+            self.task.execute("cmd", cmd)
             cmd = ("ogr2ogr -f \"ESRI Shapefile\" \"%s\" %s"
                    " -sql \"SELECT Geometry FROM %s\"") % (
-                self.zone.shapefiles[i],
-                self.zone.database,
+                self.task.shapefiles[i],
+                self.task.database,
                 status)
-            self.zone.execute("cmd", cmd)
+            self.task.execute("cmd", cmd)

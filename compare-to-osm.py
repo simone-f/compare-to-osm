@@ -19,9 +19,8 @@
 import os
 import sys
 import time
-import ConfigParser
 import argparse
-from zone import Zone
+from task import Task
 import json
 
 
@@ -35,8 +34,8 @@ class App():
                 " data. The results are shown on a leaflet map as topojson"
                 " or PNG tiles.")
         parser = argparse.ArgumentParser(description=text)
-        parser.add_argument("-p", "--print_zones_configuration",
-                            help="print zones'configuration and exit",
+        parser.add_argument("-p", "--print_tasks_configuration",
+                            help="print tasks'configuration and exit",
                             action="store_true")
 
         parser.add_argument("-a", "--analyse",
@@ -49,12 +48,12 @@ class App():
                                   " update map's data"),
                             action="store_true")
 
-        parser.add_argument("-z", "--zones",
-                            help=("consider only the zones whose name is in"
-                                  " this list and ignore other zones"
-                                  " in config.cfg"),
+        parser.add_argument("-t", "--tasks",
+                            help=("consider only the tasks whose name is in"
+                                  " this list and ignore the other"
+                                  " in tasks.json"),
                             nargs="+",
-                            metavar=("ZONENAME"))
+                            metavar=("TASKNAME"))
 
         parser.add_argument("--offline",
                             help="do not download data from OSM;"
@@ -70,104 +69,108 @@ class App():
             sys.exit(1)
 
         # Configuration
-        print "= Read config.cfg file ="
-        self.ZONESINFOFILE = "html/data/zones_info.json"
-        zones_config = self.read_config()
-        # Analyse only specified zones (--zones option)
-        if self.args.zones:
-            for zone_name in self.args.zones:
-                if zone_name not in zones_config:
-                    sys.exit("\n* Error: config.cfg does not contain a zone"
-                             " with this name: %s" % zone_name)
+        print "= Read tasks file ="
+        self.TASKSFILE = 'tasks.json'  # written by the user
+        # written by program for the web page
+        self.TASKSINFOFILE = "html/data/tasks_info.json"
 
-        self.print_zones(zones_config)
-        if self.args.print_zones_configuration:
+        tasks_config = self.read_config()
+        tasks_names = [t["name"] for t in tasks_config["tasks"]]
+
+        # Analyse only specified tasks (--tasks option)
+        if self.args.tasks:
+            for task_name in self.args.tasks:
+                if task_name not in tasks_names:
+                    sys.exit("\n* Error: tasks.json does not contain a task"
+                             " with this name: %s" % task_name)
+
+        self.print_tasks(tasks_config)
+        if self.args.print_tasks_configuration:
             sys.exit()
 
         if not (self.args.analyse or self.args.update_map):
             sys.exit("\nThere is nothing left for me to tell you.")
 
-        self.allZones = []
-        self.zones = []
-        for name, zone_config in zones_config.iteritems():
-            zone = Zone(self, name, zone_config)
-            self.allZones.append(zone)
-            if not self.args.zones or name in self.args.zones:
-                self.zones.append(zone)
+        self.allTasks = []
+        self.tasks = []
+        for task_config in tasks_config["tasks"]:
+            task = Task(self, task_config)
+            self.allTasks.append(task)
+            if not self.args.tasks or task_config["name"] in self.args.tasks:
+                self.tasks.append(task)
 
         # Analyse
         if self.args.analyse:
-            for zone in self.zones:
-                print "\n= Analyse: %s =" % zone.name
+            for task in self.tasks:
+                print "\n= Analyse: %s =" % task.name
                 # Download OSM data, compare with open data
                 # and produce output files
-                zone.comparator.analyse()
+                task.comparator.analyse()
 
         # Update map
         if self.args.update_map:
-            for zone in self.zones:
-                print "\n= Update map data: %s =" % zone.name
-                zone.update_map_data()
+            for task in self.tasks:
+                print "\n= Update map data: %s =" % task.name
+                task.update_map_data()
 
-        # Update JSON file with list of zones
-        self.update_zones_info_file()
+        # Update JSON file with informations about the tasks, used by the map
+        self.update_tasks_info_file()
 
         end = time.time()
         print "\nExecution time: ", end - start, "seconds."
 
     def read_config(self):
-        if not os.path.isfile('config.cfg'):
-            open('config.cfg', 'a').close()
-            sys.exit("\n* Please, add informations to 'config.cfg'. See"
-                     "'config_example.cfg' as an example.")
-        config = ConfigParser.RawConfigParser()
-        config.read('config.cfg')
+        if not os.path.isfile(self.TASKSFILE):
+            open(self.TASKSFILE, 'a').close()
+            sys.exit("\n* Please, add informations to %s. See"
+                     "'tasks_example.json' as an example.") % self.TASKSFILE
 
-        # Read zones data
-        zones_config = {}
-        for name in config.sections():
-            zones_config[name] = {}
-            zones_config[name]["comparator"] = config.get(name, 'comparator')
-            zones_config[name]["admin_level"] = config.get(name, 'admin_level')
-            boundaries = config.get(name, 'boundaries')
-            shapefile = config.get(name, 'shapefile')
+        # Read tasks data
+        tasks_config = self.read_json(self.TASKSFILE)
+        # Read tasks info from tasks_info.json (file )used by the web page)
+        if not os.path.exists(self.TASKSINFOFILE):
+            tasks_info = {"tasks": []}
+        else:
+            tasks_info = self.read_json(self.TASKSINFOFILE)
+
+        for task in tasks_config["tasks"]:
+            # Check for missing parameters
+            for param in ("name", "comparator", "data", "zone", "output"):
+                if param not in task:
+                    sys.exit("* Error: task %s is missing '%s' parameter." % (
+                             task["name"], param))
+            boundaries = task["data"]['boundaries']
+            shapefile = task["data"]['shapefile']
             for (file_type, file_path) in (("Boundaries", boundaries),
                                            ("Zone", shapefile)):
                 if not os.path.isfile(file_path):
-                    sys.exit("%s shapefile file is missing:\n%s" % (file_type,
-                                                                    file_path))
-            zones_config[name]["boundaries"] = boundaries[:-4]
-            zones_config[name]["shapefile"] = shapefile[:-4]
-            zones_config[name]["output"] = config.get(name, 'output')
-            if not config.has_option(name, 'min_zoom'):
-                zones_config[name]["min_zoom"] = 5
+                    sys.exit("* Error: %s shapefile file is missing:\n%s" % (
+                             file_type, file_path))
+            task["data"]['shapefile'] = shapefile[:-4]
+            task["data"]['boundaries'] = boundaries[:-4]
+
+            if 'min_zoom' not in task["output"]:
+                task["output"]["min_zoom"] = 5
             else:
-                zones_config[name]["min_zoom"] = int(config.get(name,
-                                                                'min_zoom'))
-            if not config.has_option(name, 'max_zoom'):
-                zones_config[name]["max_zoom"] = 13
+                task["output"]["min_zoom"] = int(task["output"]["min_zoom"])
+            if 'max_zoom' not in task["output"]:
+                task["output"]["max_zoom"] = 13
             else:
-                zones_config[name]["max_zoom"] = int(config.get(name,
-                                                                'max_zoom'))
-            # Read zones info from zones_info.json
-            if not os.path.exists(self.ZONESINFOFILE):
-                zones_info = {"zones": []}
-            else:
-                with open(self.ZONESINFOFILE, "r") as fp:
-                    zones_info = json.load(fp)
-            new_zone = True
-            for oldzone in zones_info["zones"]:
-                if oldzone["name"] == name:
-                    new_zone = False
-                    bbox = oldzone["bbox"]
-                    center = oldzone["center"]
-                    analysis_time = oldzone["analysis_time"]
+                task["output"]["max_zoom"] = int(task["output"]['max_zoom'])
+
+            new_task = True
+            for oldtask in tasks_info["tasks"]:
+                if oldtask["name"] == task["name"]:
+                    new_task = False
+                    bbox = oldtask["bbox"]
+                    center = oldtask["center"]
+                    analysis_time = oldtask["analysis_time"]
                     break
-            if new_zone:
+            if new_task:
                 (bbox, center, analysis_time) = ("", "", "")
-            zones_config[name]["bbox"] = bbox
-            zones_config[name]["center"] = center
-            zones_config[name]["analysis_time"] = analysis_time
+            task["bbox"] = bbox
+            task["center"] = center
+            task["analysis_time"] = analysis_time
 
         # Create missing directories and files
         osmdir = os.path.join("data", "OSM")
@@ -185,35 +188,44 @@ compare-to-osm" target="_blank">Script code</a>';"""
             info_file.write(text)
             info_file.close()
 
-        return zones_config
+        return tasks_config
 
-    def update_zones_info_file(self):
-        zones_info = {"zones": []}
-        for zone in self.allZones:
-            zones_info["zones"].append({"comparator": zone.comparator.name,
-                                        "name": zone.name,
-                                        "bbox": zone.bbox,
-                                        "center": zone.center,
-                                        "output": zone.output,
-                                        "analysis_time": zone.analysis_time
+    def read_json(self, jsonfile):
+        try:
+            with open(jsonfile) as fp:
+                return json.load(fp)
+        except ValueError:
+            sys.exit("* Error, %s invalid json. Check if it has any error"
+                     " (e.g. comments left)." % jsonfile)
+
+    def update_tasks_info_file(self):
+        tasks_info = {"tasks": []}
+        for task in self.allTasks:
+            tasks_info["tasks"].append({"comparator": task.comparator.name,
+                                        "name": task.name,
+                                        "bbox": task.bbox,
+                                        "center": task.center,
+                                        "output": task.output,
+                                        "analysis_time": task.analysis_time
                                         })
-        with open(self.ZONESINFOFILE, "w") as fp:
-            fp.write(json.dumps(zones_info,
+        with open(self.TASKSINFOFILE, "w") as fp:
+            fp.write(json.dumps(tasks_info,
                                 sort_keys=True,
                                 indent=4,
                                 separators=(',', ': ')))
 
-    def print_zones(self, zones_config):
-        print "\n= Zones ="
-        for name, zone_config in zones_config.iteritems():
-            if self.args.zones is None or (self.args.zones is not None
-               and name in self.args.zones):
-                print "\ncomparator:", zone_config["comparator"]
-                print "name:", name
-                print "admin_level:", zone_config["admin_level"]
-                print "boundaries shapefile:", zone_config["boundaries"]
-                print "highways shapefile:", zone_config["shapefile"]
-                print "output:", zone_config["output"]
+    def print_tasks(self, tasks_config):
+        print "\n= Tasks ="
+        for task in tasks_config["tasks"]:
+            if self.args.tasks is None or (self.args.tasks is not None
+               and task["name"] in self.args.tasks):
+                print "\nname:", task["name"]
+                print "comparator:", task["comparator"]
+                print "zone name:", task["zone"]["name"]
+                print "zone admin_level:", task["zone"]["admin_level"]
+                print "boundaries shapefile:", task["data"]["boundaries"]
+                print "highways shapefile:", task["data"]["shapefile"]
+                print "output:", task["output"]["type"]
 
 
 if __name__ == "__main__":

@@ -1,0 +1,46 @@
+{
+"tasks": [
+    {
+        "name": "rimini",  # a name to identify the task (without empty spaces)
+
+        "comparator": "highwaysgeometry",   # type of comparison (name of themodule in 'comparators/')
+
+        "data": {
+                "shapefile": "/home/simone/compare-to-osm/data/open_data/Rimini/archiWGS84.shp",       # path to the zone's highways Shapefile
+                "boundaries": "/home/simone/compare-to-osm/data/open_data/Rimini/boundaries_rn.shp"   # path to the zone's boundaries Shapefile
+                },
+
+        "zone": {
+                "name": "Rimini",   # name of the zone in OSM, needed to download data from Overpass
+                "admin_level": 8
+                },
+
+        "output": {
+                "type": "vector",       # "vector" (default, GeoJSON layer on Leaflet) || "raster" (PNG tiles)
+                "min_zoom": 5,          # OPTIONAL, for rendering (default 5)
+                "max_zoom": 14          # OPTIONAL, for rendering (default 13)
+                }
+    },
+
+    {
+        "name": "verona",
+
+        "comparator": "highwaysgeometry",
+
+        "data": {
+                "shapefile": "/home/simone/compare-to-osm/data/open_data/Verona/CS_GRAFO_STRADALE_RETE_VIARIA_SHP_lineWGS84.shp",
+                "boundaries": "/home/simone/compare-to-osm/data/open_data/Verona/boundaries_vr.shp"
+                },
+
+        "zone": {
+                "name": "Verona",
+                "admin_level": 8
+                },
+
+        "output": {
+                "type": "raster",
+                "min_zoom": 5,
+                "max_zoom": 13
+                }
+    }]
+}

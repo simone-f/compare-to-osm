@@ -29,7 +29,7 @@ Data:
 
 ## Usage
 ### Configuration
-* Create a `config.cfg` file with one section for each zone that you want to analyse. See `./config_example.cfg` as an example.
+* Create a `tasks.json` file with one task for each comparison you want to do. See `./tasks_example.json` as an example.
 * (Optional) Write in `./html/data/info.js` the text that you want to show in the box over the map in `./html/index.html`.
 
 ### Execution
@@ -37,7 +37,7 @@ For the list of options, run:
 
         pyhton ./compare-to-osm.py -h
         
-Analyse the data descripted in `config.cfg` and create or update the output files (`./data/out/*`):
+Analyse the data descripted in `tasks.json` and create or update the output files (`./data/out/*`):
 
         pyhton ./compare-to-osm.py --analyse
         

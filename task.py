@@ -22,28 +22,29 @@ from subprocess import call, Popen, PIPE
 from rendering.renderer import Renderer
 
 
-class Zone():
-    def __init__(self, app, name, zone_config):
+class Task():
+    def __init__(self, app, task_config):
         self.app = app
         self.statuses = ("notinosm", "onlyinosm")
 
         # Input
-        self.name = name
-        self.admin_level = zone_config["admin_level"]
-        self.shape_file = zone_config["shapefile"]
-        self.boundaries = zone_config["boundaries"]
-        self.bbox = zone_config["bbox"]
-        self.center = zone_config["center"]
-        self.analysis_time = zone_config["analysis_time"]
+        self.name = task_config["name"]
+        self.zone_name = task_config["zone"]["name"]
+        self.zone_admin_level = task_config["zone"]["admin_level"]
+        self.shape_file = task_config["data"]["shapefile"]
+        self.boundaries = task_config["data"]["boundaries"]
+        self.bbox = task_config["bbox"]
+        self.center = task_config["center"]
+        self.analysis_time = task_config["analysis_time"]
 
-        self.osm_file = "data/OSM/%s.osm" % name
+        self.osm_file = "data/OSM/%s.osm" % self.name
 
         # Output
-        self.output = zone_config["output"]
-        self.min_zoom = zone_config["min_zoom"]
-        self.max_zoom = zone_config["max_zoom"]
+        self.output = task_config["output"]["type"]
+        self.min_zoom = task_config["output"]["min_zoom"]
+        self.max_zoom = task_config["output"]["max_zoom"]
 
-        self.database = "data/out/%s.sqlite" % name
+        self.database = "data/out/%s.sqlite" % self.name
         self.output_dir = os.path.join("data", "out", self.name)
         self.geojson_files = [os.path.join(self.output_dir,
                               "%s.GeoJSON" % status)
@@ -64,7 +65,7 @@ class Zone():
         # style_points.xml in rendering
         self.geometry_type = ""
 
-        modulename = "comparators.%s" % zone_config["comparator"]
+        modulename = "comparators.%s" % task_config["comparator"]
         classname = modulename[12:].title()
         m = __import__(modulename, globals(), locals(), [classname])
         self.comparator = getattr(m, classname)(self)
