@@ -180,6 +180,8 @@ class App():
         if not os.path.isfile(self.PAGEINFOFILE):
             with open(self.PAGEINFOFILE, "w") as fp:
                 text = ("var title = 'Compare to OSM';"
+                        "\nvar mapLat = 41.8921;"
+                        "\nvar mapLon = 12.4832;"
                         "\nvar mapZoom = 5;"
                         "\nvar info = '<b>Compare to OSM</b>';"
                         "\ninfo += '<br><br>Modify this box by editing:"
