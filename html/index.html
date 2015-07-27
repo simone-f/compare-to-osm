@@ -7,14 +7,6 @@
     <link rel="stylesheet" href="css/style.css">
     <link rel="stylesheet" href="css/leaflet.css">
     <script src="js/jquery-1.10.2.min.js"></script>
-    <script type="text/javascript" src="data/info.js"></script>
-    <script type="text/javascript">
-        $(document).ready(function () {
-            // Update info
-            $('#title').html(title);
-            $('#infobox').html(info);
-            })
-    </script>
 </head>
 <body>
     <div id="map"></div>
@@ -57,12 +49,7 @@
                 for (var i in tasks) {
                     var name = tasks[i].name;
                     var bbox = tasks[i].bbox;
-                    var latLon = tasks[i].center;
                     var output = tasks[i].output;
-
-                    if (i == 0) {
-                        map.setView(latLon, mapZoom);
-                    }
 
                     if (output == "vector") {
                         layers.push({
@@ -111,6 +98,12 @@
                 }
                 var baseMaps = {"OpenStreetMap": osmLayer};
                 L.control.layers(baseMaps, overlayMaps, {"collapsed": false}).addTo(map);
+
+                $.getScript("data/page_info.js", function(data, textStatus, jqxhr) {
+                    $('#title').html(title);
+                    $('#infobox').html(info);
+                    map.setView(tasks[0].center, mapZoom);
+                });
             });
         })
     </script>

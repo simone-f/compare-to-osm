@@ -30,7 +30,7 @@ Data:
 ## Usage
 ### Configuration
 * Create a `tasks.json` file with one task for each comparison you want to do. See `./tasks_example.json` as an example.
-* (Optional) Write in `./html/data/info.js` the text that you want to show in the box over the map in `./html/index.html`.
+* (Optional) Write in `./html/data/page_info.js` the text that you want to show in the box over the map in `./html/index.html`.
 
 ### Execution
 For the list of options, run:

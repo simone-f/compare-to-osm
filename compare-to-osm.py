@@ -73,6 +73,7 @@ class App():
         self.TASKSFILE = 'tasks.json'  # written by the user
         # written by program for the web page
         self.TASKSINFOFILE = "html/data/tasks_info.json"
+        self.PAGEINFOFILE = "html/data/page_info.js"
 
         tasks_config = self.read_config()
         tasks_names = [t["name"] for t in tasks_config["tasks"]]
@@ -176,18 +177,25 @@ class App():
         osmdir = os.path.join("data", "OSM")
         if not os.path.exists(osmdir):
             os.makedirs(osmdir)
-        if not os.path.isfile('html/data/info.js'):
-            info_file = open('html/data/info.js', "w")
-            text = """
-var title = 'Compare to OSM';
-var mapZoom = 0;
-var info = '<b>Compare to OSM</b>';
-info += '<p>Modify html/data/info.js to write here';
-info += '<br><br><a href="https://github.com/simone-f/\
-compare-to-osm" target="_blank">Script code</a>';"""
-            info_file.write(text)
-            info_file.close()
-
+        if not os.path.isfile(self.PAGEINFOFILE):
+            with open(self.PAGEINFOFILE, "w") as fp:
+                text = ("var title = 'Compare to OSM';"
+                        "\nvar mapZoom = 5;"
+                        "\nvar info = '<b>Compare to OSM</b>';"
+                        "\ninfo += '<br><br>Modify this box by editing:"
+                        "<br><i>%s</i>';"
+                        "\ninfo += '<br><br>OSM data:';"
+                        "\nfor (i in tasks) {"
+                        "\n    info += '<br><i>- ' + tasks[i].name + ' ' + "
+                        "tasks[i][\"analysis_time\"] + '</i>';"
+                        "\n}"
+                        "\ninfo += '<br><br>Click on the map to "
+                        "edit with JOSM.';"
+                        "\ninfo += '<br><br>Created with:"
+                        "<br><a href=\"https://github.com/simone-f/"
+                        "compare-to-osm\" target=\"_blank\">"
+                        "compare-to-osm</a>';") % self.PAGEINFOFILE
+                fp.write(text)
         return tasks_config
 
     def read_json(self, jsonfile):
