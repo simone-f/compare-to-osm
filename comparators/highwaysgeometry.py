@@ -41,7 +41,7 @@ class Highwaysgeometry(Comparator):
         self.task.execute("cmd", "rm data/OSM/li* %s" % self.task.database)
 
         # Import boundaries
-        print "\n- import zone's boundaries"
+        print "\n- import zone's boundaries into database"
         cmd = ("spatialite_tool -i -shp %s -d %s"
                " -t boundaries -c UTF-8 -s 4326") % (self.task.boundaries,
                                                      self.task.database)
@@ -102,7 +102,7 @@ class Highwaysgeometry(Comparator):
             sql = "SELECT CreateSpatialIndex('%s_buffer', 'Geometry');" % table
             self.task.execute("qry", sql)
 
-    def find_ways(self, table):
+    def compare(self, table):
         """Calculate differences between OSM/open data ways and their buffers
         """
         if table == "notinosm":

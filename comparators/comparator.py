@@ -46,7 +46,7 @@ class Comparator:
         print ("\n== Calculate differences between OSM/open data ways"
                " and their buffers ==")
         for status in self.task.statuses:
-            self.find_ways(status)
+            self.compare(status)
 
         print ("\n== Export analysis' result as GeoJSON and Shapefiles ==")
         self.export()

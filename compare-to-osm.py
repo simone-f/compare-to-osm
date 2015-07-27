@@ -43,6 +43,11 @@ class App():
                                   " and produce output files"),
                             action="store_true")
 
+        parser.add_argument("--offline",
+                            help="do not download data from OSM;"
+                                 " use the data downloaded in previous run",
+                            action="store_true")
+
         parser.add_argument("-m", "--update_map",
                             help=("read analysis'output files and"
                                   " update map's data"),
@@ -54,11 +59,6 @@ class App():
                                   " in tasks.json"),
                             nargs="+",
                             metavar=("TASKNAME"))
-
-        parser.add_argument("--offline",
-                            help="do not download data from OSM;"
-                                 " use the data downloaded in previous run",
-                            action="store_true")
 
         start = time.time()
 
@@ -236,6 +236,8 @@ class App():
                 print "boundaries shapefile:", task["data"]["boundaries"]
                 print "highways shapefile:", task["data"]["shapefile"]
                 print "output:", task["output"]["type"]
+                print "min zoom:", task["output"]["min_zoom"]
+                print "max zoom:", task["output"]["max_zoom"]
 
 
 if __name__ == "__main__":
