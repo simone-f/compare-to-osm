@@ -66,17 +66,17 @@ class Comparator:
             FROM %s
             WHERE GeometryType(Geometry) = 'MULTILINESTRING';""" % (table_out,
                                                                     table_in)
-        self.task.execute("qry", sql)
+        self.task.execute("sql", sql)
         sql = """
             SELECT RecoverGeometryColumn('%s_MULTILINESTRING', 'Geometry',
                 4326, 'MULTILINESTRING', 'XY');
             """ % (table_out)
-        self.task.execute("qry", sql)
+        self.task.execute("sql", sql)
         # Convert MULTILINESTRING to linestring and union with LINESTRINGs
         sql = (".elemgeo %s_MULTILINESTRING Geometry"
                " %s_SINGLELINESTRING pk_elem multi_id;") % (table_out,
                                                             table_out)
-        self.task.execute("qry", sql)
+        self.task.execute("sql", sql)
         sql = """
             CREATE TABLE %s AS
             SELECT Geometry
@@ -85,7 +85,7 @@ class Comparator:
             SELECT Geometry
             FROM %s WHERE GeometryType(Geometry) = 'LINESTRING';
             """ % (table_out, table_out, table_in)
-        self.task.execute("qry", sql)
+        self.task.execute("sql", sql)
 
     def export(self):
         """Export results.

@@ -135,9 +135,9 @@ class Task():
             os.makedirs(directory)
 
     def execute(self, mode, cmd):
-        """mode == cmd OR qry
+        """mode == cmd OR sql
         """
-        if mode == "qry":
+        if mode == "sql":
             cmd = "echo \"%s\" | spatialite %s" % (cmd, self.database)
         print cmd
         call(cmd, shell=True)
