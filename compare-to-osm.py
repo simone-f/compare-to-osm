@@ -68,6 +68,8 @@ class App():
             parser.print_help()
             sys.exit(1)
 
+        os.chdir(os.path.dirname(os.path.abspath(__file__)))
+
         # Configuration
         print "= Read tasks file ="
         self.TASKSFILE = 'tasks.json'  # written by the user
@@ -103,7 +105,7 @@ class App():
         # Analyse
         if self.args.analyse:
             for task in self.tasks:
-                print "\n= Analyse: %s =" % task.name
+                print "\n= Task: %s =" % task.name
                 # Download OSM data, compare with open data
                 # and produce output files
                 task.comparator.analyse()
