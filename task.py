@@ -22,29 +22,43 @@ from rendering.renderer import Renderer
 
 
 class Task():
-    def __init__(self, app, task_config):
-        self.app = app
+    def __init__(self, project, config):
+        self.app = project.app
         self.statuses = ("notinosm", "onlyinosm")
 
         # Input
-        self.name = task_config["name"]
-        self.zone_name = task_config["zone"]["name"]
-        self.zone_admin_level = task_config["zone"]["admin_level"]
-        self.shape_file = task_config["data"]["shapefile"]
-        self.boundaries = task_config["data"]["boundaries"]
-        self.bbox = task_config["bbox"]
-        self.center = task_config["center"]
-        self.analysis_time = task_config["analysis_time"]
+        self.name = config["name"]
+        self.shape_file = config["data"]["shapefile"]
+        self.boundaries_file = config["data"]["boundaries_file"]
+        self.zone_name = config["zone"]["name"]
+        self.zone_admin_level = config["zone"]["admin_level"]
 
-        self.osm_file = "data/OSM/%s.osm" % self.name
-        self.osm_file_pbf = "data/OSM/%s.pbf" % self.name
+        # OSM data
+        osm_dir = os.path.join(project.data_dir, "osm_data", self.name)
+        if not os.path.exists(osm_dir):
+            os.makedirs(osm_dir)
+        self.osm_file = os.path.join(osm_dir, "%s.osm" % self.name)
+        self.osm_file_pbf = os.path.join(osm_dir, "%s.pbf" % self.name)
 
-        # Output
-        self.output = task_config["output"]["type"]
-        self.min_zoom = task_config["output"]["min_zoom"]
-        self.max_zoom = task_config["output"]["max_zoom"]
+        # Output config
+        if "output" not in config:
+            self.output = "vector"
+            self.min_zoom = ""
+            self.max_zoom = ""
+        else:
+            self.output = config["output"]["type"]
+            if "min_zoom" not in config["output"]:
+                self.min_zoom = "5"
+                self.max_zoom = "11"
+            else:
+                self.min_zoom = config["output"]["min_zoom"]
+                self.max_zoom = config["output"]["max_zoom"]
 
-        self.output_dir = os.path.join("data", "out", self.name)
+        # Output data
+        self.output_dir = os.path.join(project.data_dir, "output", self.name)
+        if not os.path.exists(self.output_dir):
+            os.makedirs(self.output_dir)
+
         self.geojson_files = [os.path.join(self.output_dir,
                               "%s.GeoJSON" % status)
                               for status in self.statuses]
@@ -53,51 +67,62 @@ class Task():
                            "%s.shp" % status)
                            for status in self.statuses]
 
-        # Export to map
-        self.map_data_dir = os.path.join("html", "data", self.name)
+        # Map config
+        self.bbox = config["program"]["bbox"]
+        self.center = config["program"]["center"]
+        self.analysis_time = config["program"]["analysis_time"]
+
+        # Map data
+        self.map_data_dir = os.path.join(project.html_dir, "data", self.name)
         self.map_data_dir_topojson = os.path.join(self.map_data_dir,
                                                   "topojson")
         self.map_data_dir_png = os.path.join(self.map_data_dir, "PNG")
         self.map_data_dir_tiles = os.path.join(self.map_data_dir, "tiles")
 
-        # geometries_type is used to choose from style_lines.xml or
-        # style_points.xml in rendering
-        self.geometry_type = ""
-        self.database_type = ""      # "spatialite" OR "postgis"
-
-        try:
-            self.postgis_user = task_config["postgis_user"]
-        except KeyError:
+        if "postgis_user" not in config:
             self.postgis_user = ""
-        try:
-            self.postgis_password = task_config["postgis_password"]
-        except KeyError:
+        else:
+            self.postgis_user = config["postgis_user"]
+        if "postgis_password" not in config:
             self.postgis_password = ""
+        else:
+            self.postgis_password = config["postgis_password"]
 
-        modulename = "comparators.%s" % task_config["comparator"]
+        modulename = "comparators.%s" % config["comparator"]
         classname = modulename[12:].title()
         m = __import__(modulename, globals(), locals(), [classname])
         self.comparator = getattr(m, classname)(self)
 
-        if self.database_type == "spatialite":
-            self.database = "data/out/%s.sqlite" % self.name
-        elif self.database_type == "postgis":
+        if self.comparator.database_type == "spatialite":
+            self.database = os.path.join(project.data_dir,
+                                         "%s.sqlite" % self.name)
+        elif self.comparator.database_type == "postgis":
             self.database = self.name
 
+        # Additional info that may be used by
+        # a custom index.html jinja2 template
+        if "info" in config:
+            self.info = config["info"]
+        else:
+            self.info = {}
+
+    def compare(self):
+        self.comparator.analyse()
+
     def read_boundaries_bbox(self):
-        """Read boundaries bbox to use it in generate_tiles.py
+        """Read boundaries_file bbox to use it in generate_tiles.py
         """
-        if self.database_type == "spatialite":
+        if self.comparator.database_type == "spatialite":
             query = """
                 SELECT MbrMinX(Geometry), MbrMinY(Geometry),
-                MbrMaxX(Geometry), MbrMaxY(Geometry) FROM boundaries;"""
+                MbrMaxX(Geometry), MbrMaxY(Geometry) FROM boundaries_file;"""
             echo_query = Popen(["echo", query], stdout=PIPE)
             find_bbox = Popen(["spatialite", self.database],
                               stdin=echo_query.stdout, stdout=PIPE)
             echo_query.stdout.close()
             (stdoutdata, err) = find_bbox.communicate()
             self.bbox = [float(x) for x in stdoutdata[:-1].split("|")]
-        elif self.database_type == "postgis":
+        elif self.comparator.database_type == "postgis":
             query = ("SELECT ST_XMin(ST_Extent(Geometry)), "
                      "ST_YMin(ST_Extent(Geometry)), "
                      "ST_XMax(ST_Extent(Geometry)), "
@@ -113,7 +138,7 @@ class Task():
         print "bbox:", self.bbox
 
     def read_boundaries_center(self):
-        """Read boundaries center to use it in index.html
+        """Read boundaries_file center to use it in index.html
         """
         lon = self.bbox[0] + (self.bbox[2] - self.bbox[0]) / 2
         lat = self.bbox[1] + (self.bbox[3] - self.bbox[1]) / 2
@@ -144,7 +169,7 @@ class Task():
         elif self.output == "raster":
             for i, status in enumerate(self.statuses):
                 Renderer(self, status, self.shapefiles[i],
-                         self.geometry_type)
+                         self.comparator.geometry_type)
 
     def remove_old_files_and_create_dirs(self, directory):
         if os.path.isdir(directory):

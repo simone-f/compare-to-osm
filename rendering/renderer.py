@@ -25,9 +25,10 @@ import jinja2
 class Renderer:
     def __init__(self, task, status, shapefile, geometry_type):
         self.task = task
-        stylesheet_template = ("rendering/templates/"
-                               "style_%s.xml") % geometry_type
-        self.stylesheet = "rendering/style_%s.xml" % geometry_type
+        stylesheet_template = "style_%s.xml" % geometry_type
+        self.stylesheet = os.path.join(task.app.directory,
+                                       "rendering",
+                                       "style_%s.xml" % geometry_type)
 
         self.image = os.path.join(str(task.map_data_dir_png),
                                   '%s.png' % status)
@@ -36,7 +37,8 @@ class Renderer:
         os.makedirs(self.tiles_dir)
 
         # Generate Mapnik style
-        template_loader = jinja2.FileSystemLoader(searchpath="./")
+        template_loader = jinja2.FileSystemLoader(os.path.join(
+            task.app.directory, "rendering", "templates"))
         template_env = jinja2.Environment(loader=template_loader)
         template = template_env.get_template(stylesheet_template)
         template_vars = {"status": status,

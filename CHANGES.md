@@ -1,3 +1,22 @@
+dev
+---
+* Refactorization and simplification by using "projects".<br>
+The user must now create a project to run the program. A project consists in a directory with: a configuration file (project.json), input and output data. The configuration file substitutes three previous different files: tasks.json, html/data/tasks_info.json and html/data/page_info.js.
+
+* A demo project is added as example.
+
+* Support to comparators that use PostGIS.
+
+* New comparator: highwaysgeometrypostgis.
+
+* The web page is now rendered through a Jinja2 template, each time --update_map is executed. This lets the user to generate index.html with custom templates.
+
+* Added the possibility to store more information about a task (project["tasks"][x]["info"]{...} in a project file), that may be used to show a description of the open data on the web page (source, license, date...).
+
+* Support relative paths for open data files.
+
+* If map lat and map lon are not written in a project file they are set to the last task center's coordinates.
+
 v0.4
 ----
 

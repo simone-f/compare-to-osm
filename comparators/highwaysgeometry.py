@@ -17,6 +17,8 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 from comparator import Comparator
+import os
+import sys
 
 
 # Module for comparing highways in OSM with highways in open data.
@@ -27,11 +29,11 @@ from comparator import Comparator
 class Highwaysgeometry(Comparator):
     def __init__(self, task):
         Comparator.__init__(self, task)
-
         self.name = "highwaysgeometry"
-        task.geometry_type = "lines"
-        task.database_type = "spatialite"
+        self.geometry_type = "lines"
+        self.database_type = "spatialite"
 
+        # OSM query
         self.overpass_query = 'data=area'
         self.overpass_query += '[name="%s"][admin_level=%s];' % (
             self.task.zone_name, self.task.zone_admin_level)
@@ -43,34 +45,42 @@ class Highwaysgeometry(Comparator):
         """Create a Spatialite database with OSM highways
            and lines from open data.
         """
+        if not os.path.isfile(self.task.osm_file):
+            sys.exit("\n* Error: the file with OSM data "
+                     "is missing:\n%s" % self.task.osm_file)
+
         print "- Remove data produced by previous executions of the script"
         self.task.execute("cmd", "rm data/OSM/li* %s" % self.task.database)
 
-        # Import boundaries
-        print "\n- import zone's boundaries into database"
+        # Import boundaries_file
+        print "\n- import zone's boundaries_file into database"
         cmd = ("spatialite_tool -i -shp %s -d %s"
-               " -t boundaries -c UTF-8 -s 4326") % (self.task.boundaries,
-                                                     self.task.database)
+               " -t boundaries_file -c UTF-8 -s 4326") % (
+            self.task.boundaries_file,
+            self.task.database)
         self.task.execute("cmd", cmd)
-        sql = "SELECT CreateSpatialIndex('boundaries', 'Geometry');"
+        sql = "SELECT CreateSpatialIndex('boundaries_file', 'Geometry');"
         self.task.execute("spatialite", sql)
 
         # Import OSM data
         print "\n- import OSM data into database"
-        cmd = ("ogr2ogr -f \"ESRI Shapefile\" data/OSM %s"
+        cmd = ("ogr2ogr -f \"ESRI Shapefile\" %s %s"
                " -sql \"SELECT osm_id FROM lines\""
-               " -lco SHPT=ARC") % self.task.osm_file
+               " -lco SHPT=ARC") % (self.task.output_dir, self.task.osm_file)
         self.task.execute("cmd", cmd)
 
-        cmd = ("spatialite_tool -i -shp data/OSM/lines -d %s"
-               " -t raw_osm_ways -c UTF-8 -s 4326") % self.task.database
+        cmd = ("spatialite_tool -i -shp %s -d %s"
+               " -t raw_osm_ways -c UTF-8 -s 4326") % (
+            os.path.join(self.task.output_dir, "lines"),
+            self.task.database)
         self.task.execute("cmd", cmd)
 
-        print "\n- extract highways in OSM that intersect zone's boundaries"
+        print ("\n- extract highways in OSM that intersect zone's "
+               "boundaries_file")
         sql = """
             CREATE TABLE osm_ways_MIXED AS
             SELECT ST_Intersection(b.Geometry, w.Geometry) AS Geometry
-            FROM boundaries AS b, raw_osm_ways AS w;"""
+            FROM boundaries_file AS b, raw_osm_ways AS w;"""
         self.task.execute("spatialite", sql)
 
         self.multilines_to_line("osm_ways_MIXED", "osm_ways")

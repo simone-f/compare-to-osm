@@ -10,7 +10,7 @@
     <StyleName>{{ status }}</StyleName>
     <Datasource>
       <Parameter name="type">shape</Parameter>
-      <Parameter name="file">{{ "../" + shapefile }}</Parameter>
+      <Parameter name="file">{{ shapefile }}</Parameter>
     </Datasource>
   </Layer>
 

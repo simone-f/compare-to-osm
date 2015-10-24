@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title id="title">{{ project.title }}</title>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/leaflet.css">
+    <link rel="stylesheet" href="css/leaflet.zoomdisplay.css">
+    <script src="js/jquery-1.10.2.min.js"></script>
+</head>
+<body>
+    <div id="map"></div>
+    <script src="js/leaflet.js"></script>
+    <script src="js/leaflet.zoomdisplay.js"></script>
+    <script src="js/topojson.js"></script>
+    <script>
+        $(document).ready(function () {
+            var map = L.map('map');
+            map.setView([{{ project.map_lat }}, {{ project.map_lon }}],
+                         {{ project.map_zoom }});
+
+            var osmLayer = L.tileLayer("http://{s}.tile.osm.org/{z}/{x}/{y}.png", {
+                attribution: "&copy; <a href='http://osm.org/copyright'>OpenStreetMap contributors</a>",
+                });
+            map.addLayer(osmLayer);
+
+            var popup = L.popup();
+
+            function onMapClick(e) {
+                var x = e.latlng["lng"];
+                var y = e.latlng["lat"];
+                var left = x - 0.0005;
+                var right = x + 0.0005;
+                var top = y + 0.0005;
+                var bottom = y - 0.0005;
+                var josmUrl = "http://localhost:8111/";
+                josmUrl += "load_and_zoom?left=" + left + "&right=" + right + "&top=" + top + "&bottom=" + bottom;
+                var josmLink = "Modifica questo posto in <a href='" + josmUrl + "' target='_blank' title=\"Remote link per JOSM\">JOSM</a>";
+                popup
+                    .setLatLng(e.latlng)
+                    .setContent(josmLink)
+                    .openOn(map);
+            }
+
+            map.on('click', onMapClick);
+
+            var overlayMaps = {};
+            var layers = [];
+            {% for task in project.allTasks %}
+            <!--TASK: {{ loop.index0 }} {{ task.name }}-->
+            {% if task.output == "vector" %}
+            layers.push({
+                "notinosm": L.geoJson(null, {
+                                        style: {
+                                        weight: 5,
+                                        color: 'red',
+                                        opacity: 1}
+                                        }),
+                "onlyinosm": L.geoJson(null, {
+                                        style: {
+                                        weight: 5,
+                                        color: 'green',
+                                        opacity: 1}
+                                        })
+            });
+            (function(i) {
+                $.getJSON('data/{{ project.allTasks[loop.index0].name }}/topojson/vector.GeoJSON', function (data) {
+                    layers[i]["notinosm"].addData(topojson.feature(data,
+                               data["objects"]["notinosm"]));
+                    layers[i]["onlyinosm"].addData(topojson.feature(data,
+                              data["objects"]["onlyinosm"]));
+                });
+            })({{ loop.index0 }});
+            {% endif %}
+
+            {% if task.output == "raster" %}
+            layers.push({
+                "notinosm": L.tileLayer('data/{{ task.name }}/tiles/notinosm/{z}/{x}/{y}.png'),
+                "onlyinosm": L.tileLayer('data/{{ task.name }}/tiles/onlyinosm/{z}/{x}/{y}.png')
+            });
+            {% endif %}
+            map
+                .addLayer(layers[{{ loop.index0 }}]["notinosm"])
+                .addLayer(layers[{{ loop.index0 }}]["onlyinosm"]);
+            // Deactivate layers
+            map.removeLayer(layers[{{ loop.index0 }}]["onlyinosm"]);
+
+            overlayMaps["{{ task.name }} mancanti {{ task.analysis_time }}"] = layers[{{ loop.index0 }}]["notinosm"];
+            overlayMaps["{{ task.name }} solo in OSM"] = layers[{{ loop.index0 }}]["onlyinosm"];
+            {% endfor %}
+            var baseMaps = {"OpenStreetMap": osmLayer};
+            L.control.layers(baseMaps, overlayMaps, {"collapsed": false}).addTo(map);
+        })
+    </script>
+    <div id="infobox">
+        <b>Strade da mappare in <a href="http://www.openstreetmap.org/" target="_blank">OpenStreetMap</a></b>
+        <p>Confronto fra strade in OSM e dati rilasciati dalla pubblica amministrazione.
+        <br><br>Open data:
+        {% set row = "" %}
+        {% for task in project.allTasks %}
+            {% set newrow = task.info["data_link"] + " " + task.info["data_license"] + " " + task.info["data_time"] %}
+            {% if newrow != row %}
+            <br>- {{ newrow }}
+            {% set row = newrow %}
+            {% endif %}
+        {% endfor %}
+        <br><br><b>Clicca</b> sulla mappa per modificare in JOSM.
+        <br><br><i>Pagina creata con: <a href="https://github.com/simone-f/compare-to-osm" target="_blank">compare-to-osm</a></i>
+    </div>
+</body>
+</html>

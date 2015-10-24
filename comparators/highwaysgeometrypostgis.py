@@ -18,6 +18,7 @@
 
 from comparator import Comparator
 import os
+import sys
 
 
 # Module for comparing highways in OSM with highways in open data.
@@ -28,13 +29,11 @@ import os
 class Highwaysgeometrypostgis(Comparator):
     def __init__(self, task):
         Comparator.__init__(self, task)
-
         self.name = "highwaysgeometrypostgis"
-        task.geometry_type = "lines"
-        task.database_type = "postgis"
-        task.database_user = "simone"
-        task.database_password = "postpass"
+        self.geometry_type = "lines"
+        self.database_type = "postgis"
 
+        # OSM query
         self.overpass_query = 'data=area'
         self.overpass_query += '[name="%s"][admin_level=%s];' % (
             self.task.zone_name, self.task.zone_admin_level)
@@ -46,8 +45,15 @@ class Highwaysgeometrypostgis(Comparator):
         """Create a PostGis database with OSM highways
            and lines from open data.
         """
+        if not os.path.isfile(self.task.osm_file_pbf):
+            sys.exit("\n* Error: the file with OSM data "
+                     "is missing:\n%s" % self.task.osm_file_pbf)
+        if self.task.postgis_user == "" or self.task.postgis_password == "":
+            sys.exit("\n* Error: postgis_user or postgis_password are missing "
+                     "in project file")
+
         print "- Create a new database"
-        self.task.execute("cmd", "dropdb %s" % self.task.database)
+        self.task.execute("cmd", "dropdb %s --if-exists" % self.task.database)
         self.task.execute("cmd", "createdb %s" % self.task.database)
 
         self.task.execute("postgis", "CREATE EXTENSION postgis;")

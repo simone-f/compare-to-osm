@@ -1,0 +1,52 @@
+{
+    "title": "Compare to OSM",
+    "map_lat": "41.8921",
+    "map_lon": "12.4832",
+    "map_zoom": "6",
+    "page_template": "index_demo.html",
+    "tasks": [
+        {
+            "name": "Rimini",
+            "comparator": "highwaysgeometry",
+            "data": {
+                    "boundaries_file": "Rimini/boundaries.shp",
+                    "shapefile": "Rimini/archiWGS84.shp"
+                    },
+            "zone": {
+                    "name": "Rimini",
+                    "admin_level": 8
+                    },
+            "output": {
+                    "type": "vector"
+                    },
+            "info": {
+                    "data_license": "<a href=\"http://creativecommons.org/publicdomain/zero/1.0/\" target=\"_blank\">CC0</a>",
+                    "data_link": "<a href=\"http://www.comune.rimini.it/filo_diretto/open_data/-toponomastica/\" target=\"_blank\">Comune di Rimini</a>",
+                    "data_time": ""
+                    }
+        },
+
+        {
+            "name": "Verona",
+            "comparator": "highwaysgeometry",
+            "data": {
+                    "shapefile": "Verona/CS_GRAFO_STRADALE_RETE_VIARIA_SHP_lineWGS84.shp",
+                    "boundaries_file": "Verona/boundaries.shp"
+                    },
+            "zone": {
+                    "name": "Verona",
+                    "admin_level": 8
+                    },
+            "output": {
+                    "type": "raster",
+                    "min_zoom": 5,
+                    "max_zoom": 15
+                    },
+            "info": {
+                "data_license": "<a href=\"http://www.dati.gov.it/iodl/2.0/\" target=\"_blank\">IODL 2.0</a>",
+                "data_link": "<a href=\"http://www.comune.verona.it/nqcontent.cfm?a_id=37426\" target=\"_blank\">Comune di Verona</a>",
+                "data_time": ""
+                }
+        }
+        ]
+}

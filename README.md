@@ -2,18 +2,14 @@
 
 This program compares the geometries of highways in OSM with those in one or more shapefiles.
 
-It generates GeoJSON and Shapefiles with highways missing in OSM and in the open data and shows the results on a Leaflet map, as Topojson files or PNG tiles.
+It generates GeoJSON files and Shapefiles with highways missing in OSM and in the open data and shows the results on a Leaflet map, as Topojson files or PNG tiles.
 
-Output example with open data from Italy:<br>[index.html
-](https://dl.dropboxusercontent.com/u/41550819/OSM/compare-to-osm/index.html)
-
-The program ignores footways, cycleways and pedestrian highways.
+[Here](https://dl.dropboxusercontent.com/u/41550819/OSM/compare-to-osm/index.html) is an ouput example with open data from Italy.
 
 ## Dependencies
 Programs:
 
 * wget
-* spatialite_tool
 * ogr2ogr
 * topojson
 * mapnik
@@ -21,43 +17,56 @@ Programs:
 
 In Ubuntu, install everything with:
 
-        sudo apt-get install spatialite-bin gdal-bin nodejs python-mapnik python-jinja2
+        sudo apt-get install gdal-bin nodejs python-mapnik python-jinja2
         sudo npm install -g topojson
-        
+
+You will also need Spatialite or PostGIS, depending on the comparator you use (see section below): `sudo apt-get install spatialite-bin` or `sudo apt-get install postgis postgresql-contrib osmosis`.
+
 Data:
 
-* a WGS84 shapefile with open data regarding highways from the the zone you are interested (e.g. a local council); the geometries must be Linestring
-* a Shapefile with the boundaries of the zone.
+* a WGS84 shapefile with open data regarding highways from the the zone of your interest, e.g. a local council
+* a Shapefile with the boundaries of the zone (if using `highwaysgeometry` comparator).
 
 ## Usage
 ### Configuration
-* Create a file named `tasks.json`, with the list of comparisons (tasks) you want to do.<br>See `./tasks_example.json`.
-* Optional: write in `./html/data/page_info.js` the text that you want to show in the box over the map in `./html/index.html`.<br>See `./html/data/page_info_example.js`.
+Create a new project directory into `projects` and write a `project.json` file with the configuration. See `projects/README.md` for more informations.<br>Optionally, write a Jinja2 template to generate a custom web page.
 
 ### Execution
-For the list of options, run:
+Show the list of options:
 
         pyhton ./compare-to-osm.py -h
-        
-Analyse the data descripted in `tasks.json` and create or update the output files (`./data/out/*`):
 
-        pyhton ./compare-to-osm.py --analyse
-        
-Read output files and generate the files used by the map (`./html/data/*`)
+Analyse the data and create the output files:
 
-        pyhton ./compare-to-osm.py --update_map
-        
-Open `./html/index.html` in a browser to see the results.
+        pyhton ./compare-to-osm.py projects/myproject/project.json --analyse
+
+Read analysis' output files and create the web page and GeoJSON or PNG tiles used by the map:
+
+        pyhton ./compare-to-osm.py projects/myproject/project.json --update_map
+
+Open `projects/myproject/html/index.html` in a web browser to see the results.
 
 ### Demo
-1. Uncompress the files in `./data/open_data/*.tar.gz`
-2. rename `./tasks_example.json` as `./tasks.json` and fix the files' paths in it
-3. rename `./html/data/page_info_example.js` as `./html/data/page_info.js`
-4. execute `python ./compare-to-osm.py --analyse --update_map`
-5. open `./html/index.html` in a browser.
+Run `python ./compare-to-osm.py projects/projectdemo/project.json --analyse --update_map` and  open `projects/projectdemo/html/index.html` in a web browser.
 
-### Notes
-For big areas you may prefer to use a local OSM file instead of downloading the highways from Overpass API. In this case, create the highways file manually (e.g. with `osmfilter --keep=highway Verona.o5m -o=data/OSM/Verona.osm`, where Verona is the task name) and use the options `--analyse --offline`.
+### Comparators
+The comparison is performed by one of the modules in `comparators` directory:
+
+* `comparators/highwaysgeometry.py` needs spatialite-bin package and supports Linestring shapefiles.
+* `comparators/highwaysgeometrypostgis.py` needs PostGIS and osmosis and supports Multilinestring shapefiles.
+
+You may add new modules to compare different OSM object (e.g. rivers). Just add in the project file the name of the comparator you want to use (e.g. `"comparator": "highwaysgeometry"`).
+
+### OpenStreetMap data
+By default the program downloads the OSM data from Overpass API, ignoring footways, cycleways and pedestrian highways.
+
+For big areas you may prefer to create the OSM file manually. E.g.:
+
+       osmconvert Italy.pbf -B=Verona.poly -o=Verona.o5m
+       
+       osmfilter --keep=  --keep=highway Verona.o5m -o=projects/myproject/data/OSM/Verona_highways.osm`
+
+where Verona_highways is the task name, and then use the options `--analyse --offline` to avoid the download.
 
 ## Development
 License: GPL v3

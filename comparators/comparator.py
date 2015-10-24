@@ -16,15 +16,17 @@
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import os
-import sys
 import time
 
 
 class Comparator:
     def __init__(self, task):
-        self.app = task.app
         self.task = task
+        self.app = self.task.app
+        # Geometry_type is used to choose from style_lines.xml or
+        # style_points.xml in map rendering
+        self.geometry_type = ""
+        self.database_type = ""      # "spatialite" OR "postgis"
 
     def download_osm(self):
         url = 'http://overpass.osm.rambler.ru/cgi/interpreter?'
@@ -37,8 +39,6 @@ class Comparator:
             print ("\n== Donwload OSM data of the task =="
                    "\n   highway=* != footway != cycleway")
             self.download_osm()
-        if not os.path.isfile(self.task.osm_file):
-            sys.exit("\n* Error: the file with OSM data is missing.")
 
         print "\n== Create database =="
         self.create_db()
@@ -103,27 +103,26 @@ class Comparator:
 
             # Export as GeoJSON
             cmd = "ogr2ogr -f \"GeoJSON\" \"%s\" " % self.task.geojson_files[i]
-            if self.task.database_type == "spatialite":
+            if self.database_type == "spatialite":
                 cmd += "%s -sql \"SELECT Geometry FROM " % self.task.database
-            elif self.task.database_type == "postgis":
+            elif self.database_type == "postgis":
                 cmd += ("PG:\"host=localhost user=%s"
                         " dbname=%s password=%s\" \"" % (
-                    self.task.database_user,
-                    self.task.database,
-                    self.task.database_password))
+                        self.task.postgis_user, self.task.database,
+                        self.task.postgis_password))
             cmd += "%s\"" % status
             self.task.execute("cmd", cmd)
 
             # Export as Shapefile
             cmd = ("ogr2ogr -f \"ESRI Shapefile\" "
                    "\"%s\" ") % self.task.shapefiles[i]
-            if self.task.database_type == "spatialite":
+            if self.database_type == "spatialite":
                 cmd += "%s -sql \"SELECT Geometry FROM " % self.task.database
-            elif self.task.database_type == "postgis":
+            elif self.database_type == "postgis":
                 cmd += ("PG:\"host=localhost user=%s"
                         " dbname=%s password=%s\" \"") % (
-                    self.task.database_user,
+                    self.task.postgis_user,
                     self.task.database,
-                    self.task.database_password)
+                    self.task.postgis_password)
             cmd += "%s\"" % status
             self.task.execute("cmd", cmd)
