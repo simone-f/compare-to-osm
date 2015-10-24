@@ -17,7 +17,6 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
-import sys
 from subprocess import call, Popen, PIPE
 from rendering.renderer import Renderer
 
@@ -38,13 +37,13 @@ class Task():
         self.analysis_time = task_config["analysis_time"]
 
         self.osm_file = "data/OSM/%s.osm" % self.name
+        self.osm_file_pbf = "data/OSM/%s.pbf" % self.name
 
         # Output
         self.output = task_config["output"]["type"]
         self.min_zoom = task_config["output"]["min_zoom"]
         self.max_zoom = task_config["output"]["max_zoom"]
 
-        self.database = "data/out/%s.sqlite" % self.name
         self.output_dir = os.path.join("data", "out", self.name)
         self.geojson_files = [os.path.join(self.output_dir,
                               "%s.GeoJSON" % status)
@@ -64,38 +63,61 @@ class Task():
         # geometries_type is used to choose from style_lines.xml or
         # style_points.xml in rendering
         self.geometry_type = ""
+        self.database_type = ""      # "spatialite" OR "postgis"
+
+        try:
+            self.postgis_user = task_config["postgis_user"]
+        except KeyError:
+            self.postgis_user = ""
+        try:
+            self.postgis_password = task_config["postgis_password"]
+        except KeyError:
+            self.postgis_password = ""
 
         modulename = "comparators.%s" % task_config["comparator"]
         classname = modulename[12:].title()
         m = __import__(modulename, globals(), locals(), [classname])
         self.comparator = getattr(m, classname)(self)
 
+        if self.database_type == "spatialite":
+            self.database = "data/out/%s.sqlite" % self.name
+        elif self.database_type == "postgis":
+            self.database = self.name
+
     def read_boundaries_bbox(self):
         """Read boundaries bbox to use it in generate_tiles.py
         """
-        query = """
-            SELECT MbrMinX(Geometry), MbrMinY(Geometry),
-            MbrMaxX(Geometry), MbrMaxY(Geometry) FROM boundaries;"""
-        echo_query = Popen(["echo", query], stdout=PIPE)
-        find_bbox = Popen(["spatialite", self.database],
-                          stdin=echo_query.stdout, stdout=PIPE)
-        echo_query.stdout.close()
-        (stdoutdata, err) = find_bbox.communicate()
-        self.bbox = [float(x) for x in stdoutdata[:-1].split("|")]
+        if self.database_type == "spatialite":
+            query = """
+                SELECT MbrMinX(Geometry), MbrMinY(Geometry),
+                MbrMaxX(Geometry), MbrMaxY(Geometry) FROM boundaries;"""
+            echo_query = Popen(["echo", query], stdout=PIPE)
+            find_bbox = Popen(["spatialite", self.database],
+                              stdin=echo_query.stdout, stdout=PIPE)
+            echo_query.stdout.close()
+            (stdoutdata, err) = find_bbox.communicate()
+            self.bbox = [float(x) for x in stdoutdata[:-1].split("|")]
+        elif self.database_type == "postgis":
+            query = ("SELECT ST_XMin(ST_Extent(Geometry)), "
+                     "ST_YMin(ST_Extent(Geometry)), "
+                     "ST_XMax(ST_Extent(Geometry)), "
+                     "ST_YMax(ST_Extent(Geometry)) "
+                     "FROM notinosm;")
+            echo_query = Popen(["echo", query], stdout=PIPE)
+            find_bbox = Popen(["psql", self.database],
+                              stdin=echo_query.stdout, stdout=PIPE)
+            echo_query.stdout.close()
+            (stdoutdata, err) = find_bbox.communicate()
+            self.bbox = [float(x.strip())
+                         for x in stdoutdata.split("\n")[2].split("|")]
         print "bbox:", self.bbox
 
     def read_boundaries_center(self):
         """Read boundaries center to use it in index.html
         """
-        query = """
-            SELECT ST_Y(ST_Centroid(ST_Boundary(Geometry))),
-            ST_X(ST_Centroid(ST_Boundary(Geometry))) FROM boundaries;"""
-        echo_query = Popen(["echo", query], stdout=PIPE)
-        find_center = Popen(["spatialite", self.database],
-                            stdin=echo_query.stdout, stdout=PIPE)
-        echo_query.stdout.close()
-        (stdoutdata, err) = find_center.communicate()
-        self.center = [float(x) for x in stdoutdata[:-1].split("|")]
+        lon = self.bbox[0] + (self.bbox[2] - self.bbox[0]) / 2
+        lat = self.bbox[1] + (self.bbox[3] - self.bbox[1]) / 2
+        self.center = [lat, lon]
         print "center:", self.center
 
     def update_map_data(self):
@@ -105,10 +127,6 @@ class Task():
            if output: "raster":
                Shapefile --> (mapnik) PNG tiles
         """
-        if not os.path.isfile(self.database):
-            sys.exit("\n* Error: it is not possible to continue; the database"
-                     " with the analysis is missing.")
-
         # Remove old files and create missing directories
         print "Remove old files..."
         for directory in (self.map_data_dir_topojson,
@@ -135,9 +153,11 @@ class Task():
             os.makedirs(directory)
 
     def execute(self, mode, cmd):
-        """mode == cmd OR sql
+        """mode == cmd OR spatialite OR postgis
         """
-        if mode == "sql":
+        if mode == "spatialite":
             cmd = "echo \"%s\" | spatialite %s" % (cmd, self.database)
+        elif mode == "postgis":
+            cmd = "echo \"%s\" | psql -d %s" % (cmd, self.database)
         print cmd
         call(cmd, shell=True)

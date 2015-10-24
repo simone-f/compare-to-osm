@@ -40,7 +40,7 @@ class Comparator:
         if not os.path.isfile(self.task.osm_file):
             sys.exit("\n* Error: the file with OSM data is missing.")
 
-        print "\n== Create Spatialite database =="
+        print "\n== Create database =="
         self.create_db()
 
         print ("\n== Calculate differences between OSM/open data ways"
@@ -66,17 +66,17 @@ class Comparator:
             FROM %s
             WHERE GeometryType(Geometry) = 'MULTILINESTRING';""" % (table_out,
                                                                     table_in)
-        self.task.execute("sql", sql)
+        self.task.execute("spatialite", sql)
         sql = """
             SELECT RecoverGeometryColumn('%s_MULTILINESTRING', 'Geometry',
                 4326, 'MULTILINESTRING', 'XY');
             """ % (table_out)
-        self.task.execute("sql", sql)
+        self.task.execute("spatialite", sql)
         # Convert MULTILINESTRING to linestring and union with LINESTRINGs
         sql = (".elemgeo %s_MULTILINESTRING Geometry"
                " %s_SINGLELINESTRING pk_elem multi_id;") % (table_out,
                                                             table_out)
-        self.task.execute("sql", sql)
+        self.task.execute("spatialite", sql)
         sql = """
             CREATE TABLE %s AS
             SELECT Geometry
@@ -85,7 +85,7 @@ class Comparator:
             SELECT Geometry
             FROM %s WHERE GeometryType(Geometry) = 'LINESTRING';
             """ % (table_out, table_out, table_in)
-        self.task.execute("sql", sql)
+        self.task.execute("spatialite", sql)
 
     def export(self):
         """Export results.
@@ -99,15 +99,31 @@ class Comparator:
         print ""
 
         for i, status in enumerate(self.task.statuses):
-            cmd = ("ogr2ogr -f \"GeoJSON\" \"%s\" %s"
-                   " -sql \"SELECT Geometry"
-                   " FROM %s\"") % (self.task.geojson_files[i],
-                                    self.task.database,
-                                    status)
+            print "status", status
+
+            # Export as GeoJSON
+            cmd = "ogr2ogr -f \"GeoJSON\" \"%s\" " % self.task.geojson_files[i]
+            if self.task.database_type == "spatialite":
+                cmd += "%s -sql \"SELECT Geometry FROM " % self.task.database
+            elif self.task.database_type == "postgis":
+                cmd += ("PG:\"host=localhost user=%s"
+                        " dbname=%s password=%s\" \"" % (
+                    self.task.database_user,
+                    self.task.database,
+                    self.task.database_password))
+            cmd += "%s\"" % status
             self.task.execute("cmd", cmd)
-            cmd = ("ogr2ogr -f \"ESRI Shapefile\" \"%s\" %s"
-                   " -sql \"SELECT Geometry FROM %s\"") % (
-                self.task.shapefiles[i],
-                self.task.database,
-                status)
+
+            # Export as Shapefile
+            cmd = ("ogr2ogr -f \"ESRI Shapefile\" "
+                   "\"%s\" ") % self.task.shapefiles[i]
+            if self.task.database_type == "spatialite":
+                cmd += "%s -sql \"SELECT Geometry FROM " % self.task.database
+            elif self.task.database_type == "postgis":
+                cmd += ("PG:\"host=localhost user=%s"
+                        " dbname=%s password=%s\" \"") % (
+                    self.task.database_user,
+                    self.task.database,
+                    self.task.database_password)
+            cmd += "%s\"" % status
             self.task.execute("cmd", cmd)

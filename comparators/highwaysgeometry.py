@@ -19,12 +19,18 @@
 from comparator import Comparator
 
 
+# Module for comparing highways in OSM with highways in open data.
+# Feature: highways
+# Geometry: LINESTRING
+# Source: Shapefile
+# Database: Spatialite
 class Highwaysgeometry(Comparator):
     def __init__(self, task):
         Comparator.__init__(self, task)
 
         self.name = "highwaysgeometry"
         task.geometry_type = "lines"
+        task.database_type = "spatialite"
 
         self.overpass_query = 'data=area'
         self.overpass_query += '[name="%s"][admin_level=%s];' % (
@@ -47,7 +53,7 @@ class Highwaysgeometry(Comparator):
                                                      self.task.database)
         self.task.execute("cmd", cmd)
         sql = "SELECT CreateSpatialIndex('boundaries', 'Geometry');"
-        self.task.execute("sql", sql)
+        self.task.execute("spatialite", sql)
 
         # Import OSM data
         print "\n- import OSM data into database"
@@ -65,13 +71,13 @@ class Highwaysgeometry(Comparator):
             CREATE TABLE osm_ways_MIXED AS
             SELECT ST_Intersection(b.Geometry, w.Geometry) AS Geometry
             FROM boundaries AS b, raw_osm_ways AS w;"""
-        self.task.execute("sql", sql)
+        self.task.execute("spatialite", sql)
 
         self.multilines_to_line("osm_ways_MIXED", "osm_ways")
         sql = """
             SELECT RecoverGeometryColumn('osm_ways', 'Geometry',
             4326, 'LINESTRING', 'XY');"""
-        self.task.execute("sql", sql)
+        self.task.execute("spatialite", sql)
 
         # Import open data
         print "\n- import open data"
@@ -85,7 +91,7 @@ class Highwaysgeometry(Comparator):
 
             print "\n- create spatial index of ", table
             sql = "SELECT CreateSpatialIndex('%s', 'Geometry');" % table
-            self.task.execute("sql", sql)
+            self.task.execute("spatialite", sql)
 
             print "\n- create buffers of ", table
             sql = """
@@ -94,13 +100,13 @@ class Highwaysgeometry(Comparator):
                 FROM %s
                 WHERE ST_Buffer(Geometry, 0.0001) NOT NULL;""" % (table,
                                                                   table)
-            self.task.execute("sql", sql)
+            self.task.execute("spatialite", sql)
             sql = """
                 SELECT RecoverGeometryColumn('%s_buffer', 'Geometry',
                 4326, 'POLYGON', 'XY');""" % table
-            self.task.execute("sql", sql)
+            self.task.execute("spatialite", sql)
             sql = "SELECT CreateSpatialIndex('%s_buffer', 'Geometry');" % table
-            self.task.execute("sql", sql)
+            self.task.execute("spatialite", sql)
 
     def compare(self, table):
         """Calculate differences between OSM/open data ways and their buffers
@@ -143,6 +149,6 @@ class Highwaysgeometry(Comparator):
                 WHERE f_table_name = '{buff}'
                 AND search_frame = way.Geometry));
         """.format(temptable="%s_MIXED" % table, ways=ways, buff=buff)
-        self.task.execute("sql", sql)
+        self.task.execute("spatialite", sql)
 
         self.multilines_to_line("%s_MIXED" % table, table)

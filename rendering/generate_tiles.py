@@ -127,7 +127,7 @@ class RenderThread:
 
 
 def render_tiles(bbox, mapfile, tile_dir, minZoom=1,maxZoom=18, name="unknown", num_threads=NUM_THREADS, tms_scheme=False):
-    print "render_tiles(",bbox, mapfile, tile_dir, minZoom,maxZoom, name,")"
+    print "render_tiles(",bbox, mapfile, tile_dir, minZoom,maxZoom, name,")\n..."
 
     # Launch rendering threads
     queue = Queue(32)
