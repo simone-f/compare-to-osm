@@ -34,12 +34,16 @@
                 var right = x + 0.0005;
                 var top = y + 0.0005;
                 var bottom = y - 0.0005;
+                var text = "Edit this place with: ";
                 var josmUrl = "http://localhost:8111/";
                 josmUrl += "load_and_zoom?left=" + left + "&right=" + right + "&top=" + top + "&bottom=" + bottom;
-                var josmLink = "Modifica questo posto in <a href='" + josmUrl + "' target='_blank' title=\"Remote link per JOSM\">JOSM</a>";
+                var josmLink = "<a href='" + josmUrl + "' target='_blank' title=\"JOSM remote link\">JOSM</a>";
+                var idUrl = "http://www.openstreetmap.org/edit?editor=id#map=17/" + y + "/" + x + "";
+                var idLink = "\n<a href='" + idUrl + "' target='_blank' title=\"iD link\">iD</a>";
+                text = text + josmLink + ", " + idLink;
                 popup
                     .setLatLng(e.latlng)
-                    .setContent(josmLink)
+                    .setContent(text)
                     .openOn(map);
             }
 

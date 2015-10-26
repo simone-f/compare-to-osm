@@ -30,7 +30,7 @@ You can create a new project by creating a directory and a project file (e.g. `p
 
             # MANDATORY comparison type: a name of a module in 'comparators/'.
             # To create new comparators just add their module in 'comparators/'.
-            "comparator": "highwaysgeometry",
+            "comparator": "highwaysgeometryspatialite",
             
             # MANDATORY if the comparator uses PostGIS
             "postgis_user": "simone",
