@@ -17,6 +17,7 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import os
+import sys
 from subprocess import call, Popen, PIPE
 from rendering.renderer import Renderer
 
@@ -26,10 +27,34 @@ class Task():
         self.app = project.app
         self.statuses = ("notinosm", "onlyinosm")
 
+        # Mandatory parameters
+        for param in ("name", "comparator", "data", "zone", "output"):
+            if param not in config:
+                sys.exit("* Error: task configuration is missing '%s' "
+                         "parameter:\n%s" % (param, config))
+
         # Input
         self.name = config["name"]
-        self.shape_file = config["data"]["shapefile"]
-        self.boundaries_file = config["data"]["boundaries_file"]
+
+        shapefile = os.path.join(project.directory, "data", "open_data",
+                                 config["data"]['shapefile'])
+        if not os.path.isfile(shapefile):
+            sys.exit("* Error: shapefile file is missing:\n%s" %
+                     shapefile)
+        self.shape_file = shapefile[:-4]
+
+        if "boundaries_file" in config["data"]:
+            boundariesfile = os.path.join(project.directory,
+                                          "data",
+                                          "open_data",
+                                          config["data"]['boundaries_file'])
+            if not os.path.isfile(boundariesfile):
+                sys.exit("* Error: boundaries file is missing:\n%s" %
+                         boundariesfile)
+            self.boundaries_file = boundariesfile[:-4]
+        else:
+            self.boundaries_file = ""
+
         self.zone_name = config["zone"]["name"]
         self.zone_admin_level = config["zone"]["admin_level"]
 
@@ -51,8 +76,8 @@ class Task():
                 self.min_zoom = "5"
                 self.max_zoom = "11"
             else:
-                self.min_zoom = config["output"]["min_zoom"]
-                self.max_zoom = config["output"]["max_zoom"]
+                self.min_zoom = int(config["output"]["min_zoom"])
+                self.max_zoom = int(config["output"]["max_zoom"])
 
         # Output data
         self.output_dir = os.path.join(project.data_dir, "output", self.name)
@@ -68,9 +93,14 @@ class Task():
                            for status in self.statuses]
 
         # Map config
-        self.bbox = config["program"]["bbox"]
-        self.center = config["program"]["center"]
-        self.analysis_time = config["program"]["analysis_time"]
+        if "program" not in config:
+            self.bbox = ""
+            self.center = ""
+            self.analysis_time = ""
+        else:
+            self.bbox = config["program"]["bbox"]
+            self.center = config["program"]["center"]
+            self.analysis_time = config["program"]["analysis_time"]
 
         # Map data
         self.map_data_dir = os.path.join(project.html_dir, "data", self.name)
@@ -97,6 +127,10 @@ class Task():
             self.database = os.path.join(project.data_dir,
                                          "%s.sqlite" % self.name)
         elif self.comparator.database_type == "postgis":
+            if self.postgis_user == "" or self.postgis_password == "":
+                sys.exit("* Error: you must define postgis_user and "
+                         "postgis_password in project.json to use a "
+                         "comparator based on PostGIS.")
             self.database = self.name
 
         # Additional info that may be used by

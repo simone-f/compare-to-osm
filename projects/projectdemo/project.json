@@ -7,7 +7,7 @@
     "tasks": [
         {
             "name": "Rimini",
-            "comparator": "highwaysgeometry",
+            "comparator": "highwaysgeometryspatialite",
             "data": {
                     "boundaries_file": "Rimini/boundaries.shp",
                     "shapefile": "Rimini/archiWGS84.shp"
@@ -28,7 +28,7 @@
 
         {
             "name": "Verona",
-            "comparator": "highwaysgeometry",
+            "comparator": "highwaysgeometryspatialite",
             "data": {
                     "shapefile": "Verona/CS_GRAFO_STRADALE_RETE_VIARIA_SHP_lineWGS84.shp",
                     "boundaries_file": "Verona/boundaries.shp"

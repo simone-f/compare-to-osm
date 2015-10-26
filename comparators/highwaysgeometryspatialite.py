@@ -26,10 +26,10 @@ import sys
 # Geometry: LINESTRING
 # Source: Shapefile
 # Database: Spatialite
-class Highwaysgeometry(Comparator):
+class Highwaysgeometryspatialite(Comparator):
     def __init__(self, task):
         Comparator.__init__(self, task)
-        self.name = "highwaysgeometry"
+        self.name = "highwaysgeometryspatialite"
         self.geometry_type = "lines"
         self.database_type = "spatialite"
 

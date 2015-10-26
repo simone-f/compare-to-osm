@@ -25,7 +25,7 @@ You will also need Spatialite or PostGIS, depending on the comparator you use (s
 Data:
 
 * a WGS84 shapefile with open data regarding highways from the the zone of your interest, e.g. a local council
-* a Shapefile with the boundaries of the zone (if using `highwaysgeometry` comparator).
+* a Shapefile with the boundaries of the zone (if using `highwaysgeometryspatialite` comparator).
 
 ## Usage
 ### Configuration
@@ -52,10 +52,10 @@ Run `python ./compare-to-osm.py projects/projectdemo/project.json --analyse --up
 ### Comparators
 The comparison is performed by one of the modules in `comparators` directory:
 
-* `comparators/highwaysgeometry.py` needs spatialite-bin package and supports Linestring shapefiles.
+* `comparators/highwaysgeometryspatialite.py` needs spatialite-bin package and supports Linestring shapefiles.
 * `comparators/highwaysgeometrypostgis.py` needs PostGIS and osmosis and supports Multilinestring shapefiles.
 
-You may add new modules to compare different OSM object (e.g. rivers). Just add in the project file the name of the comparator you want to use (e.g. `"comparator": "highwaysgeometry"`).
+You may add new modules to compare different OSM object (e.g. rivers). Just add in the project file the name of the comparator you want to use (e.g. `"comparator": "highwaysgeometryspatialite"`).
 
 ### OpenStreetMap data
 By default the program downloads the OSM data from Overpass API, ignoring footways, cycleways and pedestrian highways.

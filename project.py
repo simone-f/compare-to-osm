@@ -31,16 +31,16 @@ class Project(object):
         # Configuration
         self.file = os.path.join(self.app.directory,
                                  self.app.args.project_file)
-        directory = os.path.dirname(self.file)
+        self.directory = os.path.dirname(self.file)
 
         # Read tasks data
         config = self.read_file()
 
         # Create missing directories and files
-        self.data_dir = os.path.join(directory, "data")
+        self.data_dir = os.path.join(self.directory, "data")
         self.osm_dir = os.path.join(self.data_dir, "osm_data")
-        self.templates_dir = os.path.join(directory, "templates")
-        self.html_dir = os.path.join(directory, "html")
+        self.templates_dir = os.path.join(self.directory, "templates")
+        self.html_dir = os.path.join(self.directory, "html")
         for d in (self.data_dir, self.osm_dir, self.html_dir,
                   self.templates_dir):
             if not os.path.exists(d):
@@ -82,47 +82,12 @@ class Project(object):
 
         self.allTasks = []
         self.tasks = []
-        for config in config["tasks"]:
-            # Mandatory parameters
-            for param in ("name", "comparator", "data", "zone", "output"):
-                if param not in config:
-                    sys.exit("* Error: task configuration is missing '%s' "
-                             "parameter:\n%s" % (param, config))
-
-            boundaries = os.path.join(directory, "data", "open_data",
-                                      config["data"]['boundaries_file'])
-            shapefile = os.path.join(directory, "data", "open_data",
-                                     config["data"]['shapefile'])
-            for file_path in (boundaries, shapefile):
-                if not os.path.isfile(file_path):
-                    sys.exit("* Error: shapefile file is missing:\n%s" %
-                             file_path)
-
-            config["data"]['shapefile'] = shapefile[:-4]
-            config["data"]['boundaries_file'] = boundaries[:-4]
-
-            # Default values
-            if 'min_zoom' not in config["output"]:
-                config["output"]["min_zoom"] = 5
-            else:
-                config["output"]["min_zoom"] = int(
-                    config["output"]["min_zoom"])
-            if 'max_zoom' not in config["output"]:
-                config["output"]["max_zoom"] = 13
-            else:
-                config["output"]["max_zoom"] = int(
-                    config["output"]['max_zoom'])
-
-            if "program" not in config:
-                config["program"] = {}
-                config["program"]["bbox"] = ""
-                config["program"]["center"] = ""
-                config["program"]["analysis_time"] = ""
-
+        for task_config in config["tasks"]:
             # Create Task object
-            task = Task(self, config)
+            task = Task(self, task_config)
             self.allTasks.append(task)
-            if not self.app.args.tasks or config["name"] in self.app.args.tasks:
+            if not self.app.args.tasks or (task_config["name"]
+                                           in self.app.args.tasks):
                 self.tasks.append(task)
 
     def read_file(self):
