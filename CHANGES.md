@@ -1,9 +1,13 @@
 dev
 ---
+* Renamed --update_map_data option as --create_web_page, since now the entire page is rendered from a Jinja2 template every time
+
+* By default do not download OSM data: removed option --offline and added --download_osm.
+
 * Refactorization and simplification by using "projects".<br>
 The user must now create a project to run the program. A project consists in a directory with: a configuration file (project.json), input and output data. The configuration file substitutes three previous different files: tasks.json, html/data/tasks_info.json and html/data/page_info.js.
 
-* A demo project is added as example.
+* A demo project has been added as example.
 
 * Support to comparators that use PostGIS.
 

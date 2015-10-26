@@ -43,24 +43,27 @@ class App():
                             action="store_true")
 
         parser.add_argument("-a", "--analyse",
-                            help="download OSM data, compare with open data"
+                            help="compare the OSM data with open data"
                                  " and produce output files",
                             action="store_true")
 
-        parser.add_argument("--offline",
-                            help="do not download data from OSM;"
-                                 " use the data downloaded in previous run",
+        parser.add_argument("--download_osm",
+                            help="download OSM data through Overpass API, by "
+                                 "using the zone's name and admin_level from "
+                                 "project.json",
                             action="store_true")
 
-        parser.add_argument("-m", "--update_map",
-                            help="read analysis'output files and"
-                                 " update map's data",
+        parser.add_argument("-w", "--create_web_page",
+                            help="read analysis' output files, create map data"
+                                 " (GeoJSON or PNG tiles) and create web page",
                             action="store_true")
 
         parser.add_argument("-t", "--tasks",
-                            help="consider only the tasks whose name is in"
-                                 " this list and ignore the other"
-                                 " in tasks.json",
+                            help="execute -a and -w only with the tasks whose "
+                                 "name is in this, list and ignore the other "
+                                 "in tasks.json. Useful when you want to "
+                                 "update one task's result without losing the "
+                                 "data of the other",
                             nargs="+",
                             metavar=("TASKNAME"))
 
@@ -95,7 +98,7 @@ class App():
                 task.compare()
 
         # Update map
-        if self.args.update_map:
+        if self.args.create_web_page:
             for task in project.tasks:
                 print "\n= Update map data: %s =" % task.name
                 task.update_map_data()

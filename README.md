@@ -40,14 +40,14 @@ Analyse the data and create the output files:
 
         pyhton ./compare-to-osm.py projects/myproject/project.json --analyse
 
-Read analysis' output files and create the web page and GeoJSON or PNG tiles used by the map:
+Read analysis' output files, create map data (GeoJSON or PNG tiles) and the web page:
 
-        pyhton ./compare-to-osm.py projects/myproject/project.json --update_map
+        pyhton ./compare-to-osm.py projects/myproject/project.json --create_web_page
 
 Open `projects/myproject/html/index.html` in a web browser to see the results.
 
 ### Demo
-Run `python ./compare-to-osm.py projects/projectdemo/project.json --analyse --update_map` and  open `projects/projectdemo/html/index.html` in a web browser.
+Run `python ./compare-to-osm.py projects/projectdemo/project.json --analyse --create_web_page` and  open `projects/projectdemo/html/index.html` in a web browser.
 
 ### Comparators
 The comparison is performed by one of the modules in `comparators` directory:
@@ -58,7 +58,7 @@ The comparison is performed by one of the modules in `comparators` directory:
 You may add new modules to compare different OSM object (e.g. rivers). Just add in the project file the name of the comparator you want to use (e.g. `"comparator": "highwaysgeometryspatialite"`).
 
 ### OpenStreetMap data
-By default the program downloads the OSM data from Overpass API, ignoring footways, cycleways and pedestrian highways.
+For small areas you can download the OSM data by using `--download_osm` option. An Overpass query will be built by using the parameters zone name and admin_level from `project.json`.
 
 For big areas you may prefer to create the OSM file manually. E.g.:
 
@@ -66,7 +66,7 @@ For big areas you may prefer to create the OSM file manually. E.g.:
        
        osmfilter --keep=  --keep=highway Verona.o5m -o=projects/myproject/data/OSM/Verona_highways.osm`
 
-where Verona_highways is the task name, and then use the options `--analyse --offline` to avoid the download.
+where Verona_highways is the task name.
 
 ## Development
 License: GPL v3

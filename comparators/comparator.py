@@ -35,9 +35,8 @@ class Comparator:
         self.task.execute("cmd", cmd)
 
     def analyse(self):
-        if not self.app.args.offline:
-            print ("\n== Donwload OSM data of the task =="
-                   "\n   highway=* != footway != cycleway")
+        if self.app.args.download_osm:
+            print "\n== Donwload OSM data of the task"
             self.download_osm()
 
         print "\n== Create database =="
