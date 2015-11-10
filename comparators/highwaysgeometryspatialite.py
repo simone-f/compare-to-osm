@@ -35,7 +35,7 @@ class Highwaysgeometryspatialite(Comparator):
 
         # OSM query
         self.overpass_query = 'data=area'
-        self.overpass_query += '[name="%s"][admin_level=%s];' % (
+        self.overpass_query += '[name="{0}"][admin_level={1}];'.format(
             self.task.zone_name, self.task.zone_admin_level)
         self.overpass_query += 'way(area)["highway"]'
         self.overpass_query += '["highway"!~"footway"]["highway"!~"cycleway"];'
@@ -47,15 +47,16 @@ class Highwaysgeometryspatialite(Comparator):
         """
         if not os.path.isfile(self.task.osm_file):
             sys.exit("\n* Error: the file with OSM data "
-                     "is missing:\n%s" % self.task.osm_file)
+                     "is missing:\n{0}".format(self.task.osm_file))
 
         print "- Remove data produced by previous executions of the script"
-        self.task.execute("cmd", "rm data/OSM/li* %s" % self.task.database)
+        self.task.execute("cmd", "rm data/OSM/li* {0}".format(
+                          self.task.database))
 
         # Import boundaries_file
         print "\n- import zone's boundaries_file into database"
-        cmd = ("spatialite_tool -i -shp %s -d %s"
-               " -t boundaries_file -c UTF-8 -s 4326") % (
+        cmd = ("spatialite_tool -i -shp {0} -d {1}"
+               " -t boundaries_file -c UTF-8 -s 4326").format(
             self.task.boundaries_file,
             self.task.database)
         self.task.execute("cmd", cmd)
@@ -64,13 +65,14 @@ class Highwaysgeometryspatialite(Comparator):
 
         # Import OSM data
         print "\n- import OSM data into database"
-        cmd = ("ogr2ogr -f \"ESRI Shapefile\" %s %s"
+        cmd = ("ogr2ogr -f \"ESRI Shapefile\" {0} {1}"
                " -sql \"SELECT osm_id FROM lines\""
-               " -lco SHPT=ARC") % (self.task.output_dir, self.task.osm_file)
+               " -lco SHPT=ARC").format(self.task.output_dir,
+                                        self.task.osm_file)
         self.task.execute("cmd", cmd)
 
-        cmd = ("spatialite_tool -i -shp %s -d %s"
-               " -t raw_osm_ways -c UTF-8 -s 4326") % (
+        cmd = ("spatialite_tool -i -shp {0} -d {1}"
+               " -t raw_osm_ways -c UTF-8 -s 4326").format(
             os.path.join(self.task.output_dir, "lines"),
             self.task.database)
         self.task.execute("cmd", cmd)
@@ -91,31 +93,32 @@ class Highwaysgeometryspatialite(Comparator):
 
         # Import open data
         print "\n- import open data"
-        cmd = ("spatialite_tool -i -shp %s -d %s"
-               " -t open_data_ways -c CP1252 -s 4326") % (self.task.shape_file,
-                                                          self.task.database)
+        cmd = ("spatialite_tool -i -shp {0} -d {1}"
+               " -t open_data_ways -c CP1252 -s 4326").format(
+               self.task.shape_file,
+               self.task.database)
         self.task.execute("cmd", cmd)
 
         # Create spatial indexes and buffers around OSM/open data ways
         for table in ("osm_ways", "open_data_ways"):
 
             print "\n- create spatial index of ", table
-            sql = "SELECT CreateSpatialIndex('%s', 'Geometry');" % table
+            sql = "SELECT CreateSpatialIndex('{0}', 'Geometry');".format(table)
             self.task.execute("spatialite", sql)
 
             print "\n- create buffers of ", table
             sql = """
-                CREATE TABLE %s_buffer AS
+                CREATE TABLE {0}_buffer AS
                 SELECT ST_Buffer(Geometry, 0.0001) AS Geometry
-                FROM %s
-                WHERE ST_Buffer(Geometry, 0.0001) NOT NULL;""" % (table,
-                                                                  table)
+                FROM {0}
+                WHERE ST_Buffer(Geometry, 0.0001) NOT NULL;""".format(table)
             self.task.execute("spatialite", sql)
             sql = """
-                SELECT RecoverGeometryColumn('%s_buffer', 'Geometry',
-                4326, 'POLYGON', 'XY');""" % table
+                SELECT RecoverGeometryColumn('{0}_buffer', 'Geometry',
+                4326, 'POLYGON', 'XY');""".format(table)
             self.task.execute("spatialite", sql)
-            sql = "SELECT CreateSpatialIndex('%s_buffer', 'Geometry');" % table
+            sql = ("SELECT CreateSpatialIndex('{0}_buffer', "
+                   "'Geometry');").format(table)
             self.task.execute("spatialite", sql)
 
     def compare(self, table):
@@ -133,7 +136,7 @@ class Highwaysgeometryspatialite(Comparator):
             buff = "open_data_ways_buffer"
 
         sql = """
-        CREATE TABLE {temptable} AS
+        CREATE TABLE {temptable}_MIXED AS
         SELECT Geometry FROM (
             SELECT
             ST_Difference(way.Geometry, ST_Union(buffer.Geometry)) AS Geometry
@@ -158,7 +161,7 @@ class Highwaysgeometryspatialite(Comparator):
                 FROM SpatialIndex
                 WHERE f_table_name = '{buff}'
                 AND search_frame = way.Geometry));
-        """.format(temptable="%s_MIXED" % table, ways=ways, buff=buff)
+        """.format(temptable=table, ways=ways, buff=buff)
         self.task.execute("spatialite", sql)
 
-        self.multilines_to_line("%s_MIXED" % table, table)
+        self.multilines_to_line("{0}_MIXED".format(table), table)

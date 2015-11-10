@@ -30,8 +30,8 @@ class Task():
         # Mandatory parameters
         for param in ("name", "comparator", "data", "zone", "output"):
             if param not in config:
-                sys.exit("* Error: task configuration is missing '%s' "
-                         "parameter:\n%s" % (param, config))
+                sys.exit("* Error: task configuration is missing '{0}' "
+                         "parameter:\n{1}".format(param, config))
 
         # Input
         self.name = config["name"]
@@ -39,8 +39,8 @@ class Task():
         shapefile = os.path.join(project.directory, "data", "open_data",
                                  config["data"]['shapefile'])
         if not os.path.isfile(shapefile):
-            sys.exit("* Error: shapefile file is missing:\n%s" %
-                     shapefile)
+            sys.exit("* Error: shapefile file is missing:\n{0}".format(
+                     shapefile))
         self.shape_file = shapefile[:-4]
 
         if "boundaries_file" in config["data"]:
@@ -49,8 +49,8 @@ class Task():
                                           "open_data",
                                           config["data"]['boundaries_file'])
             if not os.path.isfile(boundariesfile):
-                sys.exit("* Error: boundaries file is missing:\n%s" %
-                         boundariesfile)
+                sys.exit("* Error: boundaries file is missing:\n{0}".format(
+                         boundariesfile))
             self.boundaries_file = boundariesfile[:-4]
         else:
             self.boundaries_file = ""
@@ -62,8 +62,8 @@ class Task():
         osm_dir = os.path.join(project.data_dir, "osm_data", self.name)
         if not os.path.exists(osm_dir):
             os.makedirs(osm_dir)
-        self.osm_file = os.path.join(osm_dir, "%s.osm" % self.name)
-        self.osm_file_pbf = os.path.join(osm_dir, "%s.pbf" % self.name)
+        self.osm_file = os.path.join(osm_dir, "{0}.osm".format(self.name))
+        self.osm_file_pbf = os.path.join(osm_dir, "{0}.pbf".format(self.name))
 
         # Output config
         if "output" not in config:
@@ -85,11 +85,11 @@ class Task():
             os.makedirs(self.output_dir)
 
         self.geojson_files = [os.path.join(self.output_dir,
-                              "%s.GeoJSON" % status)
+                              "{0}.GeoJSON".format(status))
                               for status in self.statuses]
 
         self.shapefiles = [os.path.join(self.output_dir,
-                           "%s.shp" % status)
+                           "{0}.shp".format(status))
                            for status in self.statuses]
 
         # Map config
@@ -118,14 +118,14 @@ class Task():
         else:
             self.postgis_password = config["postgis_password"]
 
-        modulename = "comparators.%s" % config["comparator"]
+        modulename = "comparators.{0}".format(config["comparator"])
         classname = modulename[12:].title()
         m = __import__(modulename, globals(), locals(), [classname])
         self.comparator = getattr(m, classname)(self)
 
         if self.comparator.database_type == "spatialite":
             self.database = os.path.join(project.data_dir,
-                                         "%s.sqlite" % self.name)
+                                         "{0}.sqlite".format(self.name))
         elif self.comparator.database_type == "postgis":
             if self.postgis_user == "" or self.postgis_password == "":
                 sys.exit("* Error: you must define postgis_user and "
@@ -195,7 +195,7 @@ class Task():
 
         print ""
         if self.output == "vector":
-            cmd = "topojson -q 10000000 -o %s %s" % (
+            cmd = "topojson -q 10000000 -o {0} {1}".format(
                   os.path.join(self.map_data_dir_topojson, "vector.GeoJSON"),
                   " ".join(self.geojson_files))
             self.execute("cmd", cmd)
@@ -207,7 +207,7 @@ class Task():
 
     def remove_old_files_and_create_dirs(self, directory):
         if os.path.isdir(directory):
-            self.execute("cmd", "rm -r %s/*" % directory)
+            self.execute("cmd", "rm -r {0}/*".format(directory))
         else:
             os.makedirs(directory)
 
@@ -215,8 +215,8 @@ class Task():
         """mode == cmd OR spatialite OR postgis
         """
         if mode == "spatialite":
-            cmd = "echo \"%s\" | spatialite %s" % (cmd, self.database)
+            cmd = "echo \"{0}\" | spatialite {1}".format(cmd, self.database)
         elif mode == "postgis":
-            cmd = "echo \"%s\" | psql -d %s" % (cmd, self.database)
+            cmd = "echo \"{0}\" | psql -d {1}".format(cmd, self.database)
         print cmd
         call(cmd, shell=True)

@@ -78,7 +78,7 @@ class Project(object):
             for task_name in self.app.args.tasks:
                 if task_name not in tasks_names:
                     sys.exit("\n* Error: tasks.json does not contain a task"
-                             " with this name: %s" % task_name)
+                             " with this name: {0}".format(task_name))
 
         self.allTasks = []
         self.tasks = []
@@ -95,8 +95,8 @@ class Project(object):
             with open(self.file) as fp:
                 return json.load(fp)
         except ValueError:
-            sys.exit("* Error: %s invalid json. Check if there is any error "
-                     "in it." % self.file)
+            sys.exit("* Error: {0} invalid json. Check if there is any error "
+                     "in it.".format(self.file))
 
     def print_configuration(self):
         print "\n= Project"
@@ -119,7 +119,7 @@ class Project(object):
 
     def update_map_data(self):
         for task in self.tasks:
-            print "\n= Update map data: %s =" % task.name
+            print "\n= Update map data: {0} =".format(task.name)
             task.update_map_data()
 
     def create_web_page(self):

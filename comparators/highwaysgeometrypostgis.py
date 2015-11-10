@@ -35,7 +35,7 @@ class Highwaysgeometrypostgis(Comparator):
 
         # OSM query
         self.overpass_query = 'data=area'
-        self.overpass_query += '[name="%s"][admin_level=%s];' % (
+        self.overpass_query += '[name="{0}"][admin_level={1}];'.format(
             self.task.zone_name, self.task.zone_admin_level)
         self.overpass_query += 'way(area)["highway"]'
         self.overpass_query += '["highway"!~"footway"]["highway"!~"cycleway"];'
@@ -47,33 +47,34 @@ class Highwaysgeometrypostgis(Comparator):
         """
         if not os.path.isfile(self.task.osm_file_pbf):
             sys.exit("\n* Error: the file with OSM data "
-                     "is missing:\n%s" % self.task.osm_file_pbf)
+                     "is missing:\n{0}".format(self.task.osm_file_pbf))
         if self.task.postgis_user == "" or self.task.postgis_password == "":
             sys.exit("\n* Error: postgis_user or postgis_password are missing "
                      "in project file")
 
         print "- Create a new database"
-        self.task.execute("cmd", "dropdb %s --if-exists" % self.task.database)
-        self.task.execute("cmd", "createdb %s" % self.task.database)
+        self.task.execute("cmd", "dropdb {0} --if-exists".format(
+                          self.task.database))
+        self.task.execute("cmd", "createdb {0}".format(self.task.database))
 
         self.task.execute("postgis", "CREATE EXTENSION postgis;")
         self.task.execute("postgis", "CREATE EXTENSION hstore;")
 
         self.task.execute("cmd",
-                          ("psql -d %s -f "
-                           "/usr/share/doc/osmosis/examples/"
-                           "pgsnapshot_schema_0.6.sql" % self.task.database))
+                          ("psql -d {0} -f /usr/share/doc/osmosis/examples/"
+                           "pgsnapshot_schema_0.6.sql").format(
+                           self.task.database))
         self.task.execute("cmd",
-                          "psql -d %s -f /usr/share/doc/osmosis/examples/"
-                          "pgsnapshot_schema_0.6_linestring.sql" %
-                          self.task.database)
+                          ("psql -d {0} -f /usr/share/doc/osmosis/examples/"
+                           "pgsnapshot_schema_0.6_linestring.sql").format(
+                           self.task.database))
 
         # Import boundaries
         """
         print "\n- import zone's boundaries into database"
-        cmd = ("spatialite_tool -i -shp %s -d %s"
-               " -t boundaries -c UTF-8 -s 4326") % (self.task.boundaries,
-                                                     self.task.database)
+        cmd = ("spatialite_tool -i -shp {0} -d {1}"
+               " -t boundaries -c UTF-8 -s 4326").format(self.task.boundaries,
+                                                         self.task.database)
         self.task.execute("cmd", cmd)
         sql = "SELECT CreateSpatialIndex('boundaries', 'Geometry');"
         self.task.execute("sql", sql)"""
@@ -81,24 +82,25 @@ class Highwaysgeometrypostgis(Comparator):
         # Import OSM data
         print "\n- import OSM data into database"
         self.task.execute("cmd",
-                          "osmosis --rb %s --wp database=%s "
-                          "user=%s password=%s" %
-                          (self.task.osm_file_pbf, self.task.database,
+                          ("osmosis --rb {0} --wp database={1} "
+                           "user={2} password={3}").format(
+                           self.task.osm_file_pbf, self.task.database,
                            self.task.postgis_user, self.task.postgis_password))
 
         # Import open data
         print "\n- import open data into database"
         sql_file = self.task.shape_file + ".sql"
         if os.path.isfile(sql_file):
-            self.task.execute("cmd", "rm %s" % sql_file)
+            self.task.execute("cmd", "rm {0}".format(sql_file))
         self.task.execute("cmd",
-                          ("shp2pgsql -s 4326 -W 'LATIN1' %s.shp open_data %s "
-                           "> %s" % (self.task.shape_file,
-                                     self.task.database,
-                                     sql_file)))
+                          ("shp2pgsql -s 4326 -W 'LATIN1' {0}.shp open_data "
+                           "{1} > {2}").format(self.task.shape_file,
+                                               self.task.database,
+                                               sql_file))
 
-        self.task.execute("cmd", "psql -d %s -f %s" % (self.task.database,
-                                                       sql_file))
+        self.task.execute("cmd", "psql -d {0} -f {1}".format(
+                          self.task.database,
+                          sql_file))
         sql = """
             DROP TABLE IF EXISTS open_data_dump;
 

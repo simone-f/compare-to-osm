@@ -31,7 +31,7 @@ class Comparator:
     def download_osm(self):
         url = 'http://overpass.osm.rambler.ru/cgi/interpreter?'
         url += self.overpass_query
-        cmd = "wget '%s' -O %s" % (url, self.task.osm_file)
+        cmd = "wget '{0}' -O {1}".format(url, self.task.osm_file)
         self.task.execute("cmd", cmd)
 
     def analyse(self):
@@ -58,32 +58,32 @@ class Comparator:
 
     def multilines_to_line(self, table_in, table_out):
         print ("\n- convert multilinestring to linestring"
-               " in table %s") % table_in
+               " in table {0}").format(table_in)
         # Extract MULTILINESTRINGs
         sql = """
-            CREATE TABLE %s_MULTILINESTRING AS SELECT Geometry
-            FROM %s
-            WHERE GeometryType(Geometry) = 'MULTILINESTRING';""" % (table_out,
-                                                                    table_in)
+            CREATE TABLE {0}_MULTILINESTRING AS SELECT Geometry
+            FROM {1}
+            WHERE GeometryType(Geometry) = 'MULTILINESTRING';""".format(
+            table_out,
+            table_in)
         self.task.execute("spatialite", sql)
         sql = """
-            SELECT RecoverGeometryColumn('%s_MULTILINESTRING', 'Geometry',
-                4326, 'MULTILINESTRING', 'XY');
-            """ % (table_out)
+            SELECT RecoverGeometryColumn('{0}_MULTILINESTRING', 'Geometry',
+                4326, 'MULTILINESTRING', 'XY');""".format(table_out)
         self.task.execute("spatialite", sql)
         # Convert MULTILINESTRING to linestring and union with LINESTRINGs
-        sql = (".elemgeo %s_MULTILINESTRING Geometry"
-               " %s_SINGLELINESTRING pk_elem multi_id;") % (table_out,
-                                                            table_out)
+        sql = (".elemgeo {0}_MULTILINESTRING Geometry"
+               " {1}_SINGLELINESTRING pk_elem multi_id;").format(table_out,
+                                                                 table_out)
         self.task.execute("spatialite", sql)
         sql = """
-            CREATE TABLE %s AS
+            CREATE TABLE {0} AS
             SELECT Geometry
-            FROM %s_SINGLELINESTRING
+            FROM {0}_SINGLELINESTRING
             UNION
             SELECT Geometry
-            FROM %s WHERE GeometryType(Geometry) = 'LINESTRING';
-            """ % (table_out, table_out, table_in)
+            FROM {1} WHERE GeometryType(Geometry) = 'LINESTRING';
+            """.format(table_out, table_in)
         self.task.execute("spatialite", sql)
 
     def export(self):
@@ -101,27 +101,30 @@ class Comparator:
             print "status", status
 
             # Export as GeoJSON
-            cmd = "ogr2ogr -f \"GeoJSON\" \"%s\" " % self.task.geojson_files[i]
+            cmd = "ogr2ogr -f \"GeoJSON\" \"{0}\" ".format(
+                  self.task.geojson_files[i])
             if self.database_type == "spatialite":
-                cmd += "%s -sql \"SELECT Geometry FROM " % self.task.database
+                cmd += "{0} -sql \"SELECT Geometry FROM ".format(
+                       self.task.database)
             elif self.database_type == "postgis":
-                cmd += ("PG:\"host=localhost user=%s"
-                        " dbname=%s password=%s\" \"" % (
+                cmd += ("PG:\"host=localhost user={0}"
+                        " dbname={1} password={2}\" \"").format(
                         self.task.postgis_user, self.task.database,
-                        self.task.postgis_password))
-            cmd += "%s\"" % status
+                        self.task.postgis_password)
+            cmd += "{0}\"".format(status)
             self.task.execute("cmd", cmd)
 
             # Export as Shapefile
-            cmd = ("ogr2ogr -f \"ESRI Shapefile\" "
-                   "\"%s\" ") % self.task.shapefiles[i]
+            cmd = "ogr2ogr -f \"ESRI Shapefile\" \"{0}\" ".format(
+                  self.task.shapefiles[i])
             if self.database_type == "spatialite":
-                cmd += "%s -sql \"SELECT Geometry FROM " % self.task.database
+                cmd += "{0} -sql \"SELECT Geometry FROM ".format(
+                       self.task.database)
             elif self.database_type == "postgis":
-                cmd += ("PG:\"host=localhost user=%s"
-                        " dbname=%s password=%s\" \"") % (
+                cmd += ("PG:\"host=localhost user={0}"
+                        " dbname={1} password=%s\" \"").format(
                     self.task.postgis_user,
                     self.task.database,
                     self.task.postgis_password)
-            cmd += "%s\"" % status
+            cmd += "{0}\"".format(status)
             self.task.execute("cmd", cmd)

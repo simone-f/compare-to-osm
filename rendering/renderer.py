@@ -25,13 +25,13 @@ import jinja2
 class Renderer:
     def __init__(self, task, status, shapefile, geometry_type):
         self.task = task
-        stylesheet_template = "style_%s.xml" % geometry_type
+        stylesheet_template = "style_{0}.xml".format(geometry_type)
         self.stylesheet = os.path.join(task.app.directory,
                                        "rendering",
-                                       "style_%s.xml" % geometry_type)
+                                       "style_{0}.xml".format(geometry_type))
 
         self.image = os.path.join(str(task.map_data_dir_png),
-                                  '%s.png' % status)
+                                  '{0}.png'.format(status))
         self.tiles_dir = os.path.join(self.task.map_data_dir_tiles,
                                       status) + "/"
         os.makedirs(self.tiles_dir)
@@ -60,7 +60,7 @@ class Renderer:
         mapnik.load_map(m, self.stylesheet)
         m.zoom_all()
         mapnik.render_to_file(m, self.image)
-        print "rendered image to '%s'" % self.image
+        print "rendered image to '{0}'".format(self.image)
 
     def execute_generate_tiles(self):
         print "\n- Render tiles"

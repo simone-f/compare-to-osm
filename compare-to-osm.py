@@ -102,7 +102,7 @@ class App():
         # Analyse
         if self.args.analyse:
             for task in project.tasks:
-                print "\n= Task: %s =" % task.name
+                print "\n= Task: {0} =".format(task.name)
                 # Download OSM data, compare with open data
                 # and produce output files
                 task.compare()
