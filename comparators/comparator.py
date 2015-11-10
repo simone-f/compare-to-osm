@@ -122,7 +122,7 @@ class Comparator:
                        self.task.database)
             elif self.database_type == "postgis":
                 cmd += ("PG:\"host=localhost user={0}"
-                        " dbname={1} password=%s\" \"").format(
+                        " dbname={1} password={2}\" \"").format(
                     self.task.postgis_user,
                     self.task.database,
                     self.task.postgis_password)
