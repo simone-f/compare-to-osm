@@ -22,8 +22,8 @@ import sys
 
 
 # Module for comparing highways in OSM with highways in open data.
-# Feature: highways
-# Geometry: LINESTRING
+# OSM features: highways
+# Open data geometry: LINESTRING or MULTILINESTRING
 # Source: Shapefile
 # Database: Spatialite
 class Highwaysgeometryspatialite(Comparator):
@@ -94,11 +94,17 @@ class Highwaysgeometryspatialite(Comparator):
 
         # Import open data
         print "\n- import open data"
-        cmd = ("spatialite_tool -i -shp {0} -d {1}"
-               " -t open_data_ways -c CP1252 -s 4326").format(
+        cmd = ("spatialite_tool -2 -i -shp {0} -d {1}"
+               " -t open_data_ways_MIXED -c CP1252 -s 4326").format(
                self.task.shape_file,
                self.task.database)
         self.task.execute("cmd", cmd)
+
+        self.multilines_to_line("open_data_ways_MIXED", "open_data_ways")
+        sql = """
+            SELECT RecoverGeometryColumn('open_data_ways', 'Geometry',
+            4326, 'LINESTRING', 'XY');"""
+        self.task.execute("spatialite", sql)
 
         # Create spatial indexes and buffers around OSM/open data ways
         for table in ("osm_ways", "open_data_ways"):
@@ -166,3 +172,7 @@ class Highwaysgeometryspatialite(Comparator):
         self.task.execute("spatialite", sql)
 
         self.multilines_to_line("{0}_MIXED".format(table), table)
+        sql = """
+            SELECT RecoverGeometryColumn('{0}', 'Geometry',
+            4326, 'LINESTRING', 'XY');""".format(table)
+        self.task.execute("spatialite", sql)

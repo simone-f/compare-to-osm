@@ -52,7 +52,7 @@ Run `python ./compare-to-osm.py projects/projectdemo/project.json --analyse --cr
 ### Comparators
 The comparison is performed by one of the modules in `comparators` directory:
 
-* `comparators/highwaysgeometryspatialite.py` needs spatialite-bin package and supports Linestring shapefiles.
+* `comparators/highwaysgeometryspatialite.py` needs spatialite-bin package and supports Linestring or Multilinestring shapefiles.
 * `comparators/highwaysgeometrypostgis.py` needs PostGIS and osmosis and supports Multilinestring shapefiles.
 
 You may add new modules to compare different OSM object (e.g. rivers). Just add in the project file the name of the comparator you want to use (e.g. `"comparator": "highwaysgeometryspatialite"`).
@@ -63,7 +63,7 @@ For small areas you can download the OSM data by using `--download_osm` option. 
 For big areas you may prefer to create the OSM file manually. E.g.:
 
        osmconvert Italy.pbf -B=Verona.poly -o=Verona.o5m
-       
+
        osmfilter --keep=  --keep=highway Verona.o5m -o=projects/myproject/data/OSM/Verona_highways.osm`
 
 where Verona_highways is the task name.

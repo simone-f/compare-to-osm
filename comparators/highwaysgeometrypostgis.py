@@ -22,8 +22,8 @@ import sys
 
 
 # Module for comparing highways in OSM with highways in open data.
-# Feature: highways
-# Geometry: MULTILINESTRINGZM
+# OSM features: highways
+# Oepn data geometry: MULTILINESTRINGZM
 # Source: Shapefile
 # Database: PostGis
 class Highwaysgeometrypostgis(Comparator):
