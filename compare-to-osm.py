@@ -42,28 +42,38 @@ class App():
                             help="print tasks'configuration and exit",
                             action="store_true")
 
+        parser.add_argument("--download_osm",
+                            help="download OSM data through Overpass API, by "
+                                 "using the zone's name and admin_level from "
+                                 "the project file",
+                            action="store_true")
+
         parser.add_argument("-a", "--analyse",
                             help="compare the OSM data with open data"
                                  " and produce output files",
                             action="store_true")
 
-        parser.add_argument("--download_osm",
-                            help="download OSM data through Overpass API, by "
-                                 "using the zone's name and admin_level from "
-                                 "project.json",
-                            action="store_true")
-
         parser.add_argument("-w", "--create_web_page",
                             help="read analysis' output files, create map data"
-                                 " (GeoJSON or PNG tiles) and create web page",
+                                 " (GeoJSON or PNG tiles) and create the web"
+                                 " page",
+                            action="store_true")
+
+        parser.add_argument("--create_web_page_no_data",
+                            help="create the web page without updating the map"
+                                 " data. Useful when you just want to test "
+                                 "some changes to the web page's Jinja2 "
+                                 "template without having to wait for mapnik "
+                                 "to render the map tiles",
                             action="store_true")
 
         parser.add_argument("-t", "--tasks",
-                            help="execute -a and -w only with the tasks whose "
-                                 "name is in this, list and ignore the other "
-                                 "in tasks.json. Useful when you want to "
-                                 "update one task's result without losing the "
-                                 "data of the other",
+                            help="execute -a, -w or --create_web_page_no_data "
+                                 "only with the tasks whose name is in this "
+                                 "list, ignoring the other project tasks. "
+                                 "Useful when you want to update one task's "
+                                 "result without losing the data of the "
+                                 "others",
                             nargs="+",
                             metavar=("TASKNAME"))
 
@@ -97,11 +107,10 @@ class App():
                 # and produce output files
                 task.compare()
 
-        # Update map
-        if self.args.create_web_page:
-            for task in project.tasks:
-                print "\n= Update map data: %s =" % task.name
-                task.update_map_data()
+        # Create the web page
+        if self.args.create_web_page or self.args.create_web_page_no_data:
+            if self.args.create_web_page:
+                project.update_map_data()
             project.create_web_page()
 
         # Update the project file with comparisons' results

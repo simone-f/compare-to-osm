@@ -111,6 +111,11 @@ class Project(object):
             print "min zoom:", task.min_zoom
             print "max zoom:", task.max_zoom
 
+    def update_map_data(self):
+        for task in self.tasks:
+            print "\n= Update map data: %s =" % task.name
+            task.update_map_data()
+
     def create_web_page(self):
         """Generate html/index.html with jinja2
         """
