@@ -50,7 +50,8 @@ class Highwaysgeometryspatialite(Comparator):
                      "is missing:\n{0}".format(self.task.osm_file))
 
         print "- Remove data produced by previous executions of the script"
-        self.task.execute("cmd", "rm data/OSM/li* {0}".format(
+        self.task.execute("cmd", "rm {0}/li* {1}".format(
+                          self.task.osm_dir,
                           self.task.database))
 
         # Import boundaries_file
@@ -67,13 +68,13 @@ class Highwaysgeometryspatialite(Comparator):
         print "\n- import OSM data into database"
         cmd = ("ogr2ogr -f \"ESRI Shapefile\" {0} {1}"
                " -sql \"SELECT osm_id FROM lines\""
-               " -lco SHPT=ARC").format(self.task.output_dir,
+               " -lco SHPT=ARC").format(self.task.osm_dir,
                                         self.task.osm_file)
         self.task.execute("cmd", cmd)
 
         cmd = ("spatialite_tool -i -shp {0} -d {1}"
                " -t raw_osm_ways -c UTF-8 -s 4326").format(
-            os.path.join(self.task.output_dir, "lines"),
+            os.path.join(self.task.osm_dir, "lines"),
             self.task.database)
         self.task.execute("cmd", cmd)
 

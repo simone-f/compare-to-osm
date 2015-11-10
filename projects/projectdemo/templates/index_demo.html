@@ -34,13 +34,13 @@
                 var right = x + 0.0005;
                 var top = y + 0.0005;
                 var bottom = y - 0.0005;
-                var text = "Edit this place with: ";
+                var text = "Modifica dati OSM con:<br>";
                 var josmUrl = "http://localhost:8111/";
                 josmUrl += "load_and_zoom?left=" + left + "&right=" + right + "&top=" + top + "&bottom=" + bottom;
                 var josmLink = "<a href='" + josmUrl + "' target='_blank' title=\"JOSM remote link\">JOSM</a>";
                 var idUrl = "http://www.openstreetmap.org/edit?editor=id#map=17/" + y + "/" + x + "";
                 var idLink = "\n<a href='" + idUrl + "' target='_blank' title=\"iD link\">iD</a>";
-                text = text + josmLink + ", " + idLink;
+                text = text + josmLink + "<br>" + idLink;
                 popup
                     .setLatLng(e.latlng)
                     .setContent(text)
@@ -109,7 +109,7 @@
             {% set row = newrow %}
             {% endif %}
         {% endfor %}
-        <br><br><b>Clicca</b> sulla mappa per modificare in JOSM.
+        <br><br><b>Clicca</b> sulla mappa per modificare con gli editor JOSM o iD.
         <br><br><i>Pagina creata con: <a href="https://github.com/simone-f/compare-to-osm" target="_blank">compare-to-osm</a></i>
     </div>
 </body>

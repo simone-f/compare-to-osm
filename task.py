@@ -59,11 +59,12 @@ class Task():
         self.zone_admin_level = config["zone"]["admin_level"]
 
         # OSM data
-        osm_dir = os.path.join(project.data_dir, "osm_data", self.name)
-        if not os.path.exists(osm_dir):
-            os.makedirs(osm_dir)
-        self.osm_file = os.path.join(osm_dir, "{0}.osm".format(self.name))
-        self.osm_file_pbf = os.path.join(osm_dir, "{0}.pbf".format(self.name))
+        self.osm_dir = os.path.join(project.data_dir, "osm_data", self.name)
+        if not os.path.exists(self.osm_dir):
+            os.makedirs(self.osm_dir)
+        self.osm_file = os.path.join(self.osm_dir, "{0}.osm".format(self.name))
+        self.osm_file_pbf = os.path.join(self.osm_dir,
+                                         "{0}.pbf".format(self.name))
 
         # Output config
         if "output" not in config:
