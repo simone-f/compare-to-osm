@@ -98,8 +98,14 @@ class Project(object):
             sys.exit("* Error: %s invalid json. Check if there is any error "
                      "in it." % self.file)
 
-    def print_tasks_configuration(self):
-        print "\n= Tasks ="
+    def print_configuration(self):
+        print "\n= Project"
+        print "\ntitle:", self.title
+        print "map lat:", self.map_lat
+        print "map lon:", self.map_lon
+        print "map zoom:", self.map_zoom
+        print "page template:", self.page_template
+        print "\n== Tasks"
         for task in self.allTasks:
             print "\nname:", task.name
             print "comparator:", task.comparator.name

@@ -38,8 +38,8 @@ class App():
                             help="a file describing the project"
                                  " (see README.md)")
 
-        parser.add_argument("-p", "--print_tasks_configuration",
-                            help="print tasks'configuration and exit",
+        parser.add_argument("-p", "--print_config",
+                            help="print the project's configuration and exit",
                             action="store_true")
 
         parser.add_argument("--download_osm",
@@ -95,8 +95,8 @@ class App():
         # Build the project
         project = Project(self)
 
-        project.print_tasks_configuration()
-        if self.args.print_tasks_configuration:
+        project.print_configuration()
+        if self.args.print_config:
             sys.exit()
 
         # Analyse
