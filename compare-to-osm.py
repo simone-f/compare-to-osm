@@ -114,7 +114,7 @@ class App():
             project.create_web_page()
 
         # Update the project file with comparisons' results
-        project.update_file()
+        project.update_output_file()
 
         end = time.time()
         print "\nExecution time: ", end - start, "seconds."

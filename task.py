@@ -93,15 +93,16 @@ class Task():
                            "{0}.shp".format(status))
                            for status in self.statuses]
 
-        # Map config
-        if "program" not in config:
+        # Map config from previous script execution
+        if self.name not in project.output_stats["tasks"]:
             self.bbox = ""
             self.center = ""
             self.analysis_time = ""
         else:
-            self.bbox = config["program"]["bbox"]
-            self.center = config["program"]["center"]
-            self.analysis_time = config["program"]["analysis_time"]
+            output_stats = project.output_stats["tasks"][self.name]
+            self.bbox = output_stats["bbox"]
+            self.center = output_stats["center"]
+            self.analysis_time = output_stats["analysis_time"]
 
         # Map data
         self.map_data_dir = os.path.join(project.html_dir, "data", self.name)

@@ -29,12 +29,14 @@ class Project(object):
     def __init__(self, app):
         self.app = app
         # Configuration
-        self.file = os.path.join(self.app.directory,
-                                 self.app.args.project_file)
-        self.directory = os.path.dirname(self.file)
+        project_file = os.path.join(self.app.directory,
+                                    self.app.args.project_file)
+        self.directory = os.path.dirname(project_file)
+        self.project_output_file = os.path.join(self.directory,
+                                                "project_output.json")
 
         # Read tasks data
-        config = self.read_file()
+        config = self.read_file(project_file)
 
         # Create missing directories and files
         self.data_dir = os.path.join(self.directory, "data")
@@ -71,6 +73,8 @@ class Project(object):
         else:
             self.page_template = config["page_template"]
 
+        # Tasks config
+
         # Analyse only the specified tasks (--tasks option)
         self.tasks_config = config["tasks"]
         tasks_names = [t["name"] for t in self.tasks_config]
@@ -80,23 +84,29 @@ class Project(object):
                     sys.exit("\n* Error: tasks.json does not contain a task"
                              " with this name: {0}".format(task_name))
 
+        # Read stats from previous execution (project_output.json)
+        if not os.path.isfile(self.project_output_file):
+            self.output_stats = {"tasks": {}}
+        else:
+            self.output_stats = self.read_file(self.project_output_file)
+
         self.allTasks = []
         self.tasks = []
         for task_config in config["tasks"]:
-            # Create Task object
+            # Build Task object
             task = Task(self, task_config)
             self.allTasks.append(task)
             if not self.app.args.tasks or (task_config["name"]
                                            in self.app.args.tasks):
                 self.tasks.append(task)
 
-    def read_file(self):
+    def read_file(self, filename):
         try:
-            with open(self.file) as fp:
+            with open(filename) as fp:
                 return json.load(fp)
         except ValueError:
             sys.exit("* Error: {0} invalid json. Check if there is any error "
-                     "in it.".format(self.file))
+                     "in it.".format(filename))
 
     def print_configuration(self):
         print "\n= Project"
@@ -143,52 +153,16 @@ class Project(object):
         style_file.write(output_text)
         style_file.close()
 
-    def update_file(self):
-        config = {"title": self.title,
-                  "map_lat": self.map_lat,
-                  "map_lon": self.map_lon,
-                  "map_zoom": self.map_zoom,
-                  "page_template": self.page_template,
-                  "tasks": []}
+    def update_output_file(self):
+        """Update the file that contains statistics of the analysis.
+        """
+        config = {"tasks": {}}
         for task in self.allTasks:
-            config["tasks"].append({
-                "name": task.name,
+            config["tasks"][task.name] = {"analysis_time": task.analysis_time,
+                                          "bbox": task.bbox,
+                                          "center": task.center}
 
-                "comparator": task.comparator.name,
-
-                "data": {
-                    "shapefile": task.shape_file + ".shp",
-                    "boundaries_file": task.boundaries_file + ".shp",
-                    },
-
-                "zone": {
-                    "name": task.zone_name,
-                    "admin_level": task.zone_admin_level,
-                    },
-
-                "output": {
-                    "type": task.output,
-                    "min_zoom": task.min_zoom,
-                    "max_zoom": task.max_zoom
-                    },
-
-                "info": task.info,
-
-                "program": {
-                    "analysis_time": task.analysis_time,
-                    "bbox": task.bbox,
-                    "center": task.center
-                }})
-            if task.info != {}:
-                config["tasks"][-1]["info"] = task.info
-
-            if task.postgis_user != "":
-                config["tasks"][-1]["postgis_user"] = task.postgis_user
-
-            if task.postgis_password != "":
-                config["tasks"][-1]["postgis_password"] = task.postgis_password
-
-        with open(self.file, "w") as fp:
+        with open(self.project_output_file, "w") as fp:
             fp.write(json.dumps(config,
                                 sort_keys=True,
                                 indent=4,
