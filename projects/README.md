@@ -1,7 +1,8 @@
-This README describes a compare-to-osm project.
+This README describes a compare-to-osm project file.
 
 You can create a new project by creating a directory and a project file (e.g. `projects/myproject/project.json`) with the following content.
 
+```
 {
 
     # OPTIONAL web page title (default: "Compare to OSM")
@@ -16,10 +17,6 @@ You can create a new project by creating a directory and a project file (e.g. `p
     # OPTIONAL map zoom (default: 5)
     "map_zoom": "6",
 
-    # OPTIONAL Jinja2 template for rendering the web page (default: compare-to-osm/html/templates/default_index.html)
-    # Put your custom template in project_directory/templates
-    "page_template": "template_demo_index.html",
-
     "tasks": [
 
         # Add a task for each comparison you want to do
@@ -31,30 +28,27 @@ You can create a new project by creating a directory and a project file (e.g. `p
             # MANDATORY comparison type: a name of a module in 'comparators/'.
             # To create new comparators just add their module in 'comparators/'.
             "comparator": "highwaysgeometryspatialite",
-            
+
             # MANDATORY if the comparator uses PostGIS
             "postgis_user": "simone",
-            
+
             "postgis_password": "#######",
 
             "data": {
-                    # MANDATORY shapefile with open data.
-                    # Path can be absolute or relative to compare-to-osm/projects/project_directory/data/open_data
-                    "shapefile": "Rimini/archiWGS84.shp",
+                     "open_data": {
+                            # MANDATORY shapefile with open data.
+                            # Path can be absolute or relative to compare-to-osm/projects/project_directory/data/open_data
+                            "shapefile": "Rimini/archiWGS84.shp",
 
-                    # MANDATORY if comparator == highwaysgeometry. Shapefile with boundaries of the open data.
-                    # Path can be absolute or relative to compare-to-osm/projects/project_directory/data/open_data
-                    "boundaries_file": "Rimini/boundaries_rn.shp"
-                    },
+                            # MANDATORY if comparator == highwaysgeometry. Shapefile with boundaries of the open data.
+                            # Path can be absolute or relative to compare-to-osm/projects/project_directory/data/open_data
+                            "boundaries_file": "Rimini/boundaries_rn.shp"
+                        },
 
-            "zone": {
-                    # MANDATORY if you want to download OSM data automatically from Overpass API.
-                    # Zone name
-                    "name": "Rimini",
-
-                    # MANDATORY if you want to download OSM data automatically from Overpass API.
-                    # Zone admin level
-                    "admin_level": 8
+                    # MANDATORY if you want to download OSM data automatically from Overpass API, with --download_osm option.
+                    "osm_data": {
+                            "overpass_query": "data=area[name=\"Rimini\"][admin_level=8];way(area)[\"highway\"][\"highway\"!~\"footway\"][\"highway\"!~\"cycleway\"];(._;>;);out meta;"
+                        }
                     },
 
             # OPTIONAL
@@ -71,7 +65,7 @@ You can create a new project by creating a directory and a project file (e.g. `p
                     "max_zoom": 15
                     },
 
-            # OPTIONAL information that may be used by a custom Jinja2 template for the web page
+            # OPTIONAL information that may be used in a custom Jinja2 template and shown the web page
             "info": {
                     "data_license": "<a href=\"http://creativecommons.org/publicdomain/zero/1.0/\" target=\"_blank\">CC0</a>",
                     "data_link": "<a href=\"http://www.comune.rimini.it/filo_diretto/open_data/-toponomastica/\" target=\"_blank\">Comune di Rimini</a>",
@@ -82,8 +76,9 @@ You can create a new project by creating a directory and a project file (e.g. `p
         {
             # Second task
             "name": "Verona",
-            "comparator": "highwaysgeometry",
+            "comparator": "highwaysgeometrypostgis",
             ...
         }
         ]
 }
+```
