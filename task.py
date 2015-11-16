@@ -28,7 +28,7 @@ class Task():
         self.statuses = ("notinosm", "onlyinosm")
 
         # Mandatory parameters
-        for param in ("name", "comparator", "data", "zone", "output"):
+        for param in ("name", "comparator", "data"):
             if param not in config:
                 sys.exit("* Error: task configuration is missing '{0}' "
                          "parameter:\n{1}".format(param, config))
@@ -37,17 +37,17 @@ class Task():
         self.name = config["name"]
 
         shapefile = os.path.join(project.directory, "data", "open_data",
-                                 config["data"]['shapefile'])
+                                 config["data"]["open_data"]['shapefile'])
         if not os.path.isfile(shapefile):
             sys.exit("* Error: shapefile file is missing:\n{0}".format(
                      shapefile))
         self.shape_file = shapefile[:-4]
 
-        if "boundaries_file" in config["data"]:
+        if "boundaries_file" in config["data"]["open_data"]:
             boundariesfile = os.path.join(project.directory,
                                           "data",
                                           "open_data",
-                                          config["data"]['boundaries_file'])
+                                          config["data"]["open_data"]['boundaries_file'])
             if not os.path.isfile(boundariesfile):
                 sys.exit("* Error: boundaries file is missing:\n{0}".format(
                          boundariesfile))
@@ -55,10 +55,16 @@ class Task():
         else:
             self.boundaries_file = ""
 
-        self.zone_name = config["zone"]["name"]
-        self.zone_admin_level = config["zone"]["admin_level"]
-
         # OSM data
+        if "osm_data" in config["data"]:
+            self.overpass_query = config["data"]["osm_data"]["overpass_query"]
+        else:
+            if self.app.args.download_osm:
+                sys.exit("*Error: you must specify an Overpass query for "
+                         "\"{0}\" task in project.json to use "
+                         "--download_osm".format(self.name))
+            self.overpass_query = ""
+
         self.osm_dir = os.path.join(project.data_dir, "osm_data", self.name)
         if not os.path.exists(self.osm_dir):
             os.makedirs(self.osm_dir)

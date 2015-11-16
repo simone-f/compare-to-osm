@@ -119,8 +119,7 @@ class Project(object):
         for task in self.allTasks:
             print "\nname:", task.name
             print "comparator:", task.comparator.name
-            print "zone name:", task.zone_name
-            print "zone admin_level:", task.zone_admin_level
+            print "overpass query:", task.overpass_query
             print "boundaries_file shapefile:", task.boundaries_file
             print "highways shapefile:", task.shape_file
             print "output:", task.output

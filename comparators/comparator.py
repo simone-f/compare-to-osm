@@ -29,8 +29,8 @@ class Comparator:
         self.database_type = ""      # "spatialite" OR "postgis"
 
     def download_osm(self):
-        url = 'http://overpass-api.de/api/interpreter?'
-        url += self.overpass_query
+        url = 'http://overpass-api.de/api/interpreter?{0}'.format(
+              self.task.overpass_query)
         cmd = "wget '{0}' -O {1}".format(url, self.task.osm_file)
         self.task.execute("cmd", cmd)
         if self.database_type == "postgis":

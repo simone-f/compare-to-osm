@@ -33,14 +33,6 @@ class Highwaysgeometrypostgis(Comparator):
         self.geometry_type = "lines"
         self.database_type = "postgis"
 
-        # OSM query
-        self.overpass_query = 'data=area'
-        self.overpass_query += '[name="{0}"][admin_level={1}];'.format(
-            self.task.zone_name, self.task.zone_admin_level)
-        self.overpass_query += 'way(area)["highway"]'
-        self.overpass_query += '["highway"!~"footway"]["highway"!~"cycleway"];'
-        self.overpass_query += '(._;>;);out meta;'
-
     def create_db(self):
         """Create a PostGis database with OSM highways
            and lines from open data.

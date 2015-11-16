@@ -9,12 +9,13 @@
             "name": "Rimini",
             "comparator": "highwaysgeometryspatialite",
             "data": {
-                    "boundaries_file": "Rimini/boundaries.shp",
-                    "shapefile": "Rimini/archiWGS84.shp"
-                    },
-            "zone": {
-                    "name": "Rimini",
-                    "admin_level": 8
+                    "open_data": {
+                        "boundaries_file": "Rimini/boundaries.shp",
+                        "shapefile": "Rimini/archiWGS84.shp"
+                        },
+                    "osm_data": {
+                        "overpass_query": "data=area[name=\"Rimini\"][admin_level=8];way(area)[\"highway\"][\"highway\"!~\"footway\"][\"highway\"!~\"cycleway\"];(._;>;);out meta;"
+                        }
                     },
             "output": {
                     "type": "vector"
@@ -30,12 +31,13 @@
             "name": "Verona",
             "comparator": "highwaysgeometryspatialite",
             "data": {
-                    "shapefile": "Verona/CS_GRAFO_STRADALE_RETE_VIARIA_SHP_lineWGS84.shp",
-                    "boundaries_file": "Verona/boundaries.shp"
-                    },
-            "zone": {
-                    "name": "Verona",
-                    "admin_level": 8
+                    "open_data": {
+                        "shapefile": "Verona/CS_GRAFO_STRADALE_RETE_VIARIA_SHP_lineWGS84.shp",
+                        "boundaries_file": "Verona/boundaries.shp"
+                        },
+                    "osm_data": {
+                                "overpass_query": "data=area[name=\"Verona\"][admin_level=8];way(area)[\"highway\"][\"highway\"!~\"footway\"][\"highway\"!~\"cycleway\"];(._;>;);out meta;"
+                                }
                     },
             "output": {
                     "type": "raster",
