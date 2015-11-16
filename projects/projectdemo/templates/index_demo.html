@@ -53,7 +53,7 @@
             var layers = [];
             {% for task in project.allTasks %}
             <!--TASK: {{ loop.index0 }} {{ task.name }}-->
-            {% if task.output == "vector" %}
+            {% if task.output == "vector" -%}
             layers.push({
                 "notinosm": L.geoJson(null, {
                                         style: {
@@ -76,14 +76,14 @@
                               data["objects"]["onlyinosm"]));
                 });
             })({{ loop.index0 }});
-            {% endif %}
+            {% endif -%}
 
-            {% if task.output == "raster" %}
+            {% if task.output == "raster" -%}
             layers.push({
                 "notinosm": L.tileLayer('data/{{ task.name }}/tiles/notinosm/{z}/{x}/{y}.png'),
                 "onlyinosm": L.tileLayer('data/{{ task.name }}/tiles/onlyinosm/{z}/{x}/{y}.png')
             });
-            {% endif %}
+            {% endif -%}
             map
                 .addLayer(layers[{{ loop.index0 }}]["notinosm"])
                 .addLayer(layers[{{ loop.index0 }}]["onlyinosm"]);
@@ -101,13 +101,13 @@
         <b>Strade da mappare in <a href="http://www.openstreetmap.org/" target="_blank">OpenStreetMap</a></b>
         <p>Confronto fra strade in OSM e dati rilasciati dalla pubblica amministrazione.
         <br><br>Open data:
-        {% set row = "" %}
-        {% for task in project.allTasks %}
-            {% set newrow = task.info["data_link"] + " " + task.info["data_license"] + " " + task.info["data_time"] %}
-            {% if newrow != row %}
+        {%- set row = "" -%}
+        {%- for task in project.allTasks -%}
+            {%- set newrow = task.info["data_link"] + " " + task.info["data_license"] + " " + task.info["data_time"] -%}
+            {%- if newrow != row %}
             <br>- {{ newrow }}
-            {% set row = newrow %}
-            {% endif %}
+            {%- set row = newrow -%}
+            {%- endif -%}
         {% endfor %}
         <br><br><b>Clicca</b> sulla mappa per modificare con gli editor JOSM o iD.
         <br><br><i>Pagina creata con: <a href="https://github.com/simone-f/compare-to-osm" target="_blank">compare-to-osm</a></i>
