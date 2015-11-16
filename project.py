@@ -68,10 +68,6 @@ class Project(object):
             self.map_zoom = "5"
         else:
             self.map_zoom = config["map_zoom"]
-        if "page_template" not in config or config["page_template"] == "":
-            self.page_template = ""
-        else:
-            self.page_template = config["page_template"]
 
         # Tasks config
 
@@ -114,7 +110,6 @@ class Project(object):
         print "map lat:", self.map_lat
         print "map lon:", self.map_lon
         print "map zoom:", self.map_zoom
-        print "page template:", self.page_template
         print "\n== Tasks"
         for task in self.allTasks:
             print "\nname:", task.name
@@ -137,20 +132,18 @@ class Project(object):
         if self.map_lat == self.map_lon == "":
             self.map_lat = self.allTasks[-1].center[0]
             self.map_lon = self.allTasks[-1].center[1]
-        if self.page_template == "":
+        template_file = "index.html"
+        if os.path.isfile(os.path.join(self.templates_dir, template_file)):
+            template_dir = self.templates_dir
+        else:
             template_dir = os.path.join(self.app.directory, "html",
                                         "templates")
-            template_file = "default_index.html"
-        else:
-            template_dir = self.templates_dir
-            template_file = self.page_template
         template_env = jinja2.Environment(loader=jinja2.FileSystemLoader(
                                           template_dir))
         template = template_env.get_template(template_file)
         output_text = template.render({"project": self})
-        style_file = open(os.path.join(self.html_dir, "index.html"), "w")
-        style_file.write(output_text)
-        style_file.close()
+        with open(os.path.join(self.html_dir, "index.html"), "w") as f:
+            f.write(output_text)
 
     def update_output_file(self):
         """Update the file that contains statistics of the analysis.
