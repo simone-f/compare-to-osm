@@ -33,6 +33,11 @@ class Comparator:
         url += self.overpass_query
         cmd = "wget '{0}' -O {1}".format(url, self.task.osm_file)
         self.task.execute("cmd", cmd)
+        if self.database_type == "postgis":
+            cmd = "osmconvert {0} -o={1}".format(
+                  self.task.osm_file,
+                  self.task.osm_file[:-3] + ".pbf")
+            self.task.execute("cmd", cmd)
 
     def analyse(self):
         if self.app.args.download_osm:

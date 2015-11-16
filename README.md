@@ -10,6 +10,7 @@ It generates GeoJSON files and Shapefiles with highways missing in OSM and in th
 Programs:
 
 * wget
+* osmconvert
 * ogr2ogr
 * topojson
 * mapnik
@@ -17,7 +18,7 @@ Programs:
 
 In Ubuntu, install everything with:
 
-        sudo apt-get install gdal-bin nodejs python-mapnik python-jinja2
+        sudo apt-get install osmctools gdal-bin nodejs python-mapnik python-jinja2
         sudo npm install -g topojson
 
 You will also need Spatialite or PostGIS, depending on the comparator you use (see section below): `sudo apt-get install spatialite-bin` or `sudo apt-get install postgis postgresql-contrib osmosis`.
