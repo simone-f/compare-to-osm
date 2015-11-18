@@ -17,6 +17,8 @@
 #  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 import time
+import os
+import sys
 
 
 class Comparator:
@@ -33,16 +35,29 @@ class Comparator:
               self.task.overpass_query)
         cmd = "wget '{0}' -O {1}".format(url, self.task.osm_file)
         self.task.execute("cmd", cmd)
-        if self.database_type == "postgis":
-            cmd = "osmconvert {0} -o={1}".format(
-                  self.task.osm_file,
-                  self.task.osm_file[:-3] + ".pbf")
-            self.task.execute("cmd", cmd)
+        self.convert_osm_to_pbf(self.task.osm_file, self.task.osm_file_pbf)
+
+    def convert_osm_to_pbf(self, osm_file, pbf_file):
+        cmd = "osmconvert {0} -o={1}".format(osm_file, pbf_file)
+        self.task.execute("cmd", cmd)
 
     def analyse(self):
         if self.app.args.download_osm:
             print "\n== Donwload OSM data of the task"
             self.download_osm()
+
+        # Check that OSM data exist
+        if not os.path.isfile(self.task.osm_file_pbf):
+            if (os.path.isfile(self.task.osm_file) and
+                    os.stat(self.task.osm_file).st_size == 0):
+                os.remove(self.task.osm_file)
+            if os.path.isfile(self.task.osm_file):
+                self.convert_osm_to_pbf(self.task.osm_file,
+                                        self.task.osm_file_pbf)
+            else:
+                sys.exit("\n* Error: the file with OSM data "
+                         "is missing. See \"OpenStreetMap data\" section in "
+                         "README.md.")
 
         print "\n== Create database =="
         self.create_db()

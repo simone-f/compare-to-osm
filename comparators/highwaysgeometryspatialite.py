@@ -37,10 +37,6 @@ class Highwaysgeometryspatialite(Comparator):
         """Create a Spatialite database with OSM highways
            and lines from open data.
         """
-        if not os.path.isfile(self.task.osm_file):
-            sys.exit("\n* Error: the file with OSM data "
-                     "is missing:\n{0}".format(self.task.osm_file))
-
         print "- Remove data produced by previous executions of the script"
         self.task.execute("cmd", "rm {0}/li* {1}".format(
                           self.task.osm_dir,
@@ -61,7 +57,7 @@ class Highwaysgeometryspatialite(Comparator):
         cmd = ("ogr2ogr -f \"ESRI Shapefile\" {0} {1}"
                " -sql \"SELECT osm_id FROM lines\""
                " -lco SHPT=ARC").format(self.task.osm_dir,
-                                        self.task.osm_file)
+                                        self.task.osm_file_pbf)
         self.task.execute("cmd", cmd)
 
         cmd = ("spatialite_tool -i -shp {0} -d {1}"

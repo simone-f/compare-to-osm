@@ -37,9 +37,6 @@ class Highwaysgeometrypostgis(Comparator):
         """Create a PostGis database with OSM highways
            and lines from open data.
         """
-        if not os.path.isfile(self.task.osm_file_pbf):
-            sys.exit("\n* Error: the file with OSM data "
-                     "is missing:\n{0}".format(self.task.osm_file_pbf))
         if self.task.postgis_user == "" or self.task.postgis_password == "":
             sys.exit("\n* Error: postgis_user or postgis_password are missing "
                      "in project file")
