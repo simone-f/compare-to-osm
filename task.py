@@ -132,7 +132,7 @@ class Task():
         self.comparator = getattr(m, classname)(self)
 
         if self.comparator.database_type == "spatialite":
-            self.database = os.path.join(project.data_dir,
+            self.database = os.path.join(self.output_dir,
                                          "{0}.sqlite".format(self.name))
         elif self.comparator.database_type == "postgis":
             if self.postgis_user == "" or self.postgis_password == "":
