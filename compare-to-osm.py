@@ -86,10 +86,10 @@ class App():
             sys.exit(1)
 
         self.directory = os.path.dirname(os.path.abspath(__file__))
-        os.chdir(self.directory)
 
         if not os.path.isfile(self.args.project_file):
-            print "* Error: project file not found."
+            print "* Error: project file not found\n{0}".format(
+                  self.args.project_file)
             sys.exit(1)
 
         # Build the project

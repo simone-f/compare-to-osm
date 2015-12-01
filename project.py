@@ -29,14 +29,12 @@ class Project(object):
     def __init__(self, app):
         self.app = app
         # Configuration
-        project_file = os.path.join(self.app.directory,
-                                    self.app.args.project_file)
-        self.directory = os.path.dirname(project_file)
+        self.directory = os.path.dirname(self.app.args.project_file)
         self.project_output_file = os.path.join(self.directory,
                                                 "project_output.json")
 
         # Read tasks data
-        config = self.read_file(project_file)
+        config = self.read_file(self.app.args.project_file)
 
         # Create missing directories and files
         self.data_dir = os.path.join(self.directory, "data")
