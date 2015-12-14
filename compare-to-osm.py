@@ -42,11 +42,21 @@ class App():
                             help="print the project's configuration and exit",
                             action="store_true")
 
-        parser.add_argument("--download_osm",
-                            help="download OSM data through Overpass API, by "
-                                 "using the zone's name and admin_level from "
-                                 "the project file",
-                            action="store_true")
+        group = parser.add_mutually_exclusive_group()
+
+        group.add_argument("--download_osm",
+                           help="download OSM data through Overpass API, by "
+                                "using the \"overpass_query\" properties from "
+                                "the project file "
+                                "(see projects/projectdemo/README.md)",
+                           action="store_true")
+
+        group.add_argument("--filter_osm",
+                           help="filter OSM data through osmfilter, by "
+                                "using the osmfilter command in "
+                                "\"osmfilter_command\" "
+                                "properties from the project file",
+                           action="store_true")
 
         parser.add_argument("-a", "--analyse",
                             help="compare the OSM data with open data"

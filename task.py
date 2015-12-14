@@ -56,14 +56,15 @@ class Task():
             self.boundaries_file = ""
 
         # OSM data
+        self.overpass_query = ""
+        self.osmfilter_command = ""
         if "osm_data" in config["data"]:
-            self.overpass_query = config["data"]["osm_data"]["overpass_query"]
-        else:
-            if self.app.args.download_osm:
-                sys.exit("*Error: you must specify an Overpass query for "
-                         "\"{0}\" task in project.json to use "
-                         "--download_osm".format(self.name))
-            self.overpass_query = ""
+            if "overpass_query" in config["data"]["osm_data"]:
+                self.overpass_query = \
+                    config["data"]["osm_data"]["overpass_query"]
+            if "osmfilter_command" in config["data"]["osm_data"]:
+                self.osmfilter_command = \
+                    config["data"]["osm_data"]["osmfilter_command"]
 
         self.osm_dir = os.path.join(project.data_dir, "osm_data", self.name)
         if not os.path.exists(self.osm_dir):
@@ -71,6 +72,8 @@ class Task():
         self.osm_file = os.path.join(self.osm_dir, "{0}.osm".format(self.name))
         self.osm_file_pbf = os.path.join(self.osm_dir,
                                          "{0}.pbf".format(self.name))
+        self.osm_file_o5m = os.path.join(self.osm_dir,
+                                         "{0}.o5m".format(self.name))
 
         # Output config
         if "output" not in config:
@@ -149,6 +152,9 @@ class Task():
             self.info = {}
 
     def compare(self):
+        # Remove old output files
+        print "Remove old files..."
+        self.remove_old_files_and_create_dirs(self.output_dir)
         self.comparator.analyse()
 
     def read_boundaries_bbox(self):

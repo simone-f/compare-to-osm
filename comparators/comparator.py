@@ -37,6 +37,13 @@ class Comparator:
         self.task.execute("cmd", cmd)
         self.convert_osm_to_pbf(self.task.osm_file, self.task.osm_file_pbf)
 
+    def filter_osm(self):
+        current_dir = os.getcwd()
+        os.chdir(self.task.osm_dir)
+        self.task.execute("cmd", self.task.osmfilter_command)
+        self.convert_osm_to_pbf(self.task.osm_file_o5m, self.task.osm_file_pbf)
+        os.chdir(current_dir)
+
     def convert_osm_to_pbf(self, osm_file, pbf_file):
         cmd = "osmconvert {0} -o={1}".format(osm_file, pbf_file)
         self.task.execute("cmd", cmd)
@@ -44,7 +51,20 @@ class Comparator:
     def analyse(self):
         if self.app.args.download_osm:
             print "\n== Donwload OSM data of the task"
+            if self.task.overpass_query == "":
+                sys.exit("\n*Error: you must specify an Overpass query for "
+                         "\"{0}\" task in project.json to use "
+                         "--download_osm".format(self.task.name))
             self.download_osm()
+
+        if self.app.args.filter_osm:
+            print "\n== Filter OSM data of the task"
+            if self.task.osmfilter_command == "":
+                sys.exit("\n*Error: you must specify an osmfilter command "
+                         " (\"osmfilter_command\" property) for "
+                         "\"{0}\" task in project.json to use "
+                         "--filter_osm".format(self.task.name))
+            self.filter_osm()
 
         # Check that OSM data exist
         if not os.path.isfile(self.task.osm_file_pbf):
@@ -112,11 +132,6 @@ class Comparator:
            Spatialite --> GeoJSON
            Spatialite --> Shapefile
         """
-        # Remove old files and create missing directories
-        print "Remove old files..."
-        self.task.remove_old_files_and_create_dirs(self.task.output_dir)
-        print ""
-
         for i, status in enumerate(self.task.statuses):
             print "status", status
 

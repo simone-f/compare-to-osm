@@ -38,9 +38,7 @@ class Highwaysgeometryspatialite(Comparator):
            and lines from open data.
         """
         print "- Remove data produced by previous executions of the script"
-        self.task.execute("cmd", "rm {0}/li* {1}".format(
-                          self.task.osm_dir,
-                          self.task.database))
+        self.task.execute("cmd", "rm {0}/li*".format(self.task.osm_dir))
 
         # Import boundaries_file
         print "\n- import zone's boundaries_file into database"
